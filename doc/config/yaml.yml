@@ -25,7 +25,7 @@ postal:
   use_resent_sender_header: true
   # Path to the private key used for signing
   signing_key_path: $config-file-root/signing.key
-  # An array of SMTP relays in the format of smtp://host:port?ssl_mode=Auto. Relays that require authentication use smtp://username:password@host:port?auth_type=login (percent-encode the credentials; auth_type may be plain, login or cram_md5)
+  # An array of SMTP relays in the format of smtp://host:port?ssl_mode=Auto. Relays that require authentication use smtp://username:password@host:port?auth_type=login (percent-encode the credentials; auth_type may be plain, login or cram_md5). Credentials are only ever sent over TLS: ssl_mode defaults to STARTTLS for them and None is refused
   smtp_relays: []
   # An array of IP addresses to trust for proxying requests to Postal (in addition to localhost addresses)
   trusted_proxies: []
@@ -53,8 +53,8 @@ worker:
   default_health_server_bind_address: 127.0.0.1
   # The number of threads to execute within each worker
   threads: 2
-  # The number of seconds a queued message may stay locked without progress before the lock is assumed abandoned (worker died or hung) and released. Must exceed smtp_client.start_timeout plus smtp_client.transaction_timeout.
-  queued_message_lock_timeout: 900
+  # The number of seconds a queued message may stay locked without progress before the lock is assumed abandoned (worker died or hung) and released. Must be at least 5 minutes more than smtp_client.start_timeout plus smtp_client.transaction_timeout.
+  queued_message_lock_timeout: 1800
 
 main_db:
   # Hostname for the main MariaDB server
