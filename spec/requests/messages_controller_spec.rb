@@ -46,6 +46,58 @@ RSpec.describe "MessagesController", type: :request do
     end
   end
 
+  describe "#get_time_from_string" do
+    def time_from(string)
+      MessagesController.new.send(:get_time_from_string, string)
+    end
+
+    it "parses a date with a time" do
+      expect(time_from("2024-01-15 13:45")).to eq Time.new(2024, 1, 15, 13, 45)
+    end
+
+    it "parses a date without a time as midnight" do
+      expect(time_from("2024-01-15")).to eq Time.new(2024, 1, 15, 0)
+    end
+
+    it "parses a three digit year literally" do
+      expect(time_from("999-01-15")).to eq Time.new(999, 1, 15, 0)
+    end
+
+    it "falls back to natural language parsing for other formats" do
+      expect(time_from("2024-1-5").to_date).to eq Date.new(2024, 1, 5)
+      expect(time_from("2024-01-15T13:45")).to eq Time.new(2024, 1, 15, 13, 45)
+      expect(time_from("2024-01-15 13:45:00")).to eq Time.new(2024, 1, 15, 13, 45)
+      expect(time_from("15th January 2024").to_date).to eq Date.new(2024, 1, 15)
+    end
+
+    it "falls back to natural language parsing when there is trailing whitespace" do
+      expect(time_from("2024-01-15\n").to_date).to eq Date.new(2024, 1, 15)
+      expect(time_from("2024-01-15 13:45 ").to_date).to eq Date.new(2024, 1, 15)
+    end
+
+    it "parses relative times in the past" do
+      Timecop.freeze(Time.new(2024, 6, 1, 12, 0)) do
+        expect(time_from("yesterday").to_date).to eq Date.new(2024, 5, 31)
+      end
+    end
+
+    it "raises when the date is impossible" do
+      expect { time_from("2024-13-45") }.to raise_error(MessagesController::TimeUndetermined)
+      expect { time_from("2024-01-15 25:61") }.to raise_error(MessagesController::TimeUndetermined)
+    end
+
+    it "raises when the string cannot be understood" do
+      expect { time_from("not a date") }.to raise_error(MessagesController::TimeUndetermined, /not a date/)
+      expect { time_from("") }.to raise_error(MessagesController::TimeUndetermined)
+      expect { time_from("2024-01-15'; DROP TABLE messages; --") }.to raise_error(MessagesController::TimeUndetermined)
+    end
+
+    it "interprets a two digit year as the current century" do
+      pending "the year group accepts two digits which are passed to Time.new as the year 24"
+      expect(time_from("24-01-15")).to eq Time.new(2024, 1, 15, 0)
+    end
+  end
+
   describe "messages/html view template" do
     # We assert against the template source rather than rendering it in a
     # request spec because the full application layout depends on the asset

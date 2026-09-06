@@ -43,6 +43,20 @@ describe User do
     it { is_expected.to allow_value("test+tagged@EXAMPLE.COM").for(:email_address) }
     it { is_expected.to_not allow_value("test+tagged").for(:email_address) }
     it { is_expected.to_not allow_value("test.com").for(:email_address) }
+    it { is_expected.to allow_value("test@localhost").for(:email_address) }
+    it { is_expected.to allow_value("\"quoted name\"@example.com").for(:email_address) }
+    it { is_expected.to allow_value("tëst@bücher.example").for(:email_address) }
+    it { is_expected.to allow_value("test@[192.168.0.1]").for(:email_address) }
+    it { is_expected.to_not allow_value("test at example.com").for(:email_address) }
+    it { is_expected.to_not allow_value("test＠example.com").for(:email_address) }
+    it { is_expected.to_not allow_value("").for(:email_address) }
+    it { is_expected.to_not allow_value("   ").for(:email_address) }
+    it { is_expected.to_not allow_value(nil).for(:email_address) }
+
+    it "rejects an address without a local part or domain" do
+      pending "the format check only requires an @ to be present"
+      expect(user).not_to allow_value("@").for(:email_address)
+    end
 
     it "does not require a password when OIDC is enabled" do
       allow(Postal::Config.oidc).to receive(:enabled?).and_return(true)

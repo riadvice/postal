@@ -100,6 +100,60 @@ RSpec.describe "Legacy Send API", type: :request do
         end
       end
 
+      context "when the message uses LF line endings" do
+        let(:params) { default_params.merge(data: Base64.encode64(data.to_s.gsub("\r\n", "\n"))) }
+
+        it "still authenticates the from header" do
+          parsed_body = JSON.parse(response.body)
+          expect(parsed_body["status"]).to eq "success"
+          expect(parsed_body["data"]["messages"].keys).to eq ["test1@example.com", "test2@example.com"]
+        end
+      end
+
+      context "when the from header is not authenticated" do
+        let(:params) { default_params.merge(data: Base64.encode64("From: spoof@unauthorised.example\r\nTo: test1@example.com\r\nSubject: x\r\n\r\nbody")) }
+
+        it "returns an error" do
+          parsed_body = JSON.parse(response.body)
+          expect(parsed_body["status"]).to eq "error"
+          expect(parsed_body["data"]["code"]).to eq "UnauthenticatedFromAddress"
+        end
+      end
+
+      context "when an authenticated from address only appears in the body" do
+        let(:params) do
+          raw = "From: spoof@unauthorised.example\r\nTo: test1@example.com\r\nSubject: x\r\n\r\nFrom: test@#{domain.name}\r\nSender: test@#{domain.name}\r\n\r\nbody"
+          default_params.merge(data: Base64.encode64(raw))
+        end
+
+        it "does not authenticate the message" do
+          parsed_body = JSON.parse(response.body)
+          expect(parsed_body["data"]["code"]).to eq "UnauthenticatedFromAddress"
+        end
+      end
+
+      context "when an authenticated from address only appears in the body of an LF message" do
+        let(:params) do
+          raw = "From: spoof@unauthorised.example\nTo: test1@example.com\nSubject: x\n\nFrom: test@#{domain.name}\n\nbody"
+          default_params.merge(data: Base64.encode64(raw))
+        end
+
+        it "does not authenticate the message" do
+          parsed_body = JSON.parse(response.body)
+          expect(parsed_body["data"]["code"]).to eq "UnauthenticatedFromAddress"
+        end
+      end
+
+      context "when the data is not valid base64" do
+        let(:params) { default_params.merge(data: "!!! not base64 !!!") }
+
+        it "returns an error rather than raising" do
+          parsed_body = JSON.parse(response.body)
+          expect(parsed_body["status"]).to eq "error"
+          expect(parsed_body["data"]["code"]).to eq "UnauthenticatedFromAddress"
+        end
+      end
+
       context "when no recipients are provided" do
         let(:params) { default_params.merge(rcpt_to: []) }
 

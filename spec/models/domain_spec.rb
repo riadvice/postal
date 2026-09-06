@@ -52,10 +52,50 @@ describe Domain do
     it { is_expected.to validate_uniqueness_of(:name).scoped_to([:owner_type, :owner_id]).case_insensitive.with_message("is already added") }
     it { is_expected.to allow_value("example.com").for(:name) }
     it { is_expected.to allow_value("example.co.uk").for(:name) }
+    it { is_expected.to allow_value("sub.example.com").for(:name) }
+    it { is_expected.to allow_value("my-domain.co").for(:name) }
+    it { is_expected.to allow_value("xn--bcher-kva.example").for(:name) }
+    it { is_expected.to allow_value("123.example").for(:name) }
+    it { is_expected.to allow_value("localhost").for(:name) }
+    it { is_expected.to allow_value("a.#{'b' * 63}.com").for(:name) }
     it { is_expected.to_not allow_value("EXAMPLE.COM").for(:name) }
+    it { is_expected.to_not allow_value("Example.com").for(:name) }
     it { is_expected.to_not allow_value("example.com ").for(:name) }
+    it { is_expected.to_not allow_value(" example.com").for(:name) }
     it { is_expected.to_not allow_value("example com").for(:name) }
+    it { is_expected.to_not allow_value("example.com\n").for(:name) }
+    it { is_expected.to_not allow_value("example.com\nevil.com").for(:name) }
+    it { is_expected.to_not allow_value("example_domain.com").for(:name) }
+    it { is_expected.to_not allow_value("bücher.example").for(:name) }
+    it { is_expected.to_not allow_value("example.com/path").for(:name) }
+    it { is_expected.to_not allow_value("example.com:25").for(:name) }
+    it { is_expected.to_not allow_value("user@example.com").for(:name) }
+    it { is_expected.to_not allow_value("*.example.com").for(:name) }
+    it { is_expected.to_not allow_value("http://example.com").for(:name) }
+    it { is_expected.to_not allow_value("example.com`").for(:name) }
+    it { is_expected.to_not allow_value("").for(:name) }
+    it { is_expected.to_not allow_value("   ").for(:name) }
     it { is_expected.to validate_inclusion_of(:verification_method).in_array(Domain::VERIFICATION_METHODS) }
+
+    it "rejects a leading dot" do
+      pending "the name format only restricts the character set"
+      expect(domain).not_to allow_value(".example.com").for(:name)
+    end
+
+    it "rejects a trailing dot" do
+      pending "the name format only restricts the character set"
+      expect(domain).not_to allow_value("example.com.").for(:name)
+    end
+
+    it "rejects consecutive dots" do
+      pending "the name format only restricts the character set"
+      expect(domain).not_to allow_value("example..com").for(:name)
+    end
+
+    it "rejects a label longer than 63 characters" do
+      pending "the name format only restricts the character set"
+      expect(domain).not_to allow_value("#{'a' * 64}.com").for(:name)
+    end
   end
 
   describe "creation" do
@@ -234,6 +274,20 @@ describe Domain do
 
       it "returns the DKIM record" do
         expect(domain.dkim_record).to match(/\Av=DKIM1; t=s; h=sha256; p=.*;\z/)
+      end
+
+      it "strips the PEM armour and newlines from the public key" do
+        record = domain.dkim_record
+        expect(record).not_to include("\n")
+        expect(record).not_to include("BEGIN")
+        expect(record).not_to include("END")
+        expect(record).not_to include("-")
+        expect(record).to match(/\Av=DKIM1; t=s; h=sha256; p=[A-Za-z0-9+\/=]+;\z/)
+      end
+
+      it "includes the DER-encoded public key" do
+        public_key = domain.dkim_record[/p=([^;]+);/, 1]
+        expect(public_key).to eq Base64.strict_encode64(domain.dkim_key.public_key.to_der)
       end
     end
   end

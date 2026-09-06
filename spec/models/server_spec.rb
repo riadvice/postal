@@ -76,6 +76,26 @@ describe Server do
     it { is_expected.not_to allow_value("hello+").for(:permalink) }
     it { is_expected.not_to allow_value("!!!").for(:permalink) }
     it { is_expected.not_to allow_value("[hello]").for(:permalink) }
+    it { is_expected.to allow_value("a").for(:permalink) }
+    it { is_expected.to allow_value("123").for(:permalink) }
+    it { is_expected.to allow_value("a-b-c").for(:permalink) }
+    it { is_expected.not_to allow_value("Hello").for(:permalink) }
+    it { is_expected.not_to allow_value("hello_world").for(:permalink) }
+    it { is_expected.not_to allow_value("hello.world").for(:permalink) }
+    it { is_expected.not_to allow_value("hello/world").for(:permalink) }
+    it { is_expected.not_to allow_value("héllo").for(:permalink) }
+    it { is_expected.not_to allow_value("hello\n").for(:permalink) }
+    it { is_expected.not_to allow_value("hello\nworld").for(:permalink) }
+    it { is_expected.not_to allow_value("hello world").for(:permalink) }
+    it { is_expected.not_to allow_value(" hello").for(:permalink) }
+    it { is_expected.not_to allow_value("hello ").for(:permalink) }
+    it { is_expected.not_to allow_value("hello`").for(:permalink) }
+
+    it "derives a permalink from the name when blank" do
+      server = build(:server, name: "My Server", permalink: "")
+      expect(server).to be_valid
+      expect(server.permalink).to eq "my-server"
+    end
 
     describe "ip pool validation" do
       let(:org) { create(:organization) }
@@ -651,6 +671,49 @@ describe Server do
 
       it "returns nil if no server exists" do
         expect(described_class["hello/world"]).to be nil
+      end
+
+      it "returns the server with the ID when the string is numeric" do
+        server = create(:server)
+        expect(described_class[server.id.to_s]).to eq server
+      end
+
+      it "returns nil for a numeric string with no matching ID" do
+        expect(described_class["999999"]).to be nil
+      end
+
+      it "returns nil when there are extra path components" do
+        server = create(:server)
+        expect(described_class["#{server.organization.permalink}/#{server.permalink}/extra"]).to be nil
+        expect(described_class["/#{server.organization.permalink}/#{server.permalink}"]).to be nil
+      end
+
+      it "returns nil when the string has trailing whitespace or newlines" do
+        server = create(:server)
+        expect(described_class["#{server.organization.permalink}/#{server.permalink}\n"]).to be nil
+        expect(described_class["#{server.organization.permalink}/#{server.permalink} "]).to be nil
+      end
+
+      it "returns nil when the string contains other characters" do
+        server = create(:server)
+        expect(described_class["#{server.organization.permalink}/#{server.permalink}'"]).to be nil
+        expect(described_class["#{server.organization.permalink}/#{server.permalink}%"]).to be nil
+        expect(described_class["#{server.organization.permalink}.x/#{server.permalink}"]).to be nil
+      end
+
+      it "returns nil for an empty string" do
+        expect(described_class[""]).to be nil
+      end
+
+      it "returns nil for nil" do
+        expect(described_class[nil]).to be nil
+      end
+
+      it "finds a server whose permalinks contain hyphens" do
+        pending "the lookup regex only allows word characters although permalinks may contain hyphens"
+        organization = create(:organization, permalink: "my-org")
+        server = create(:server, organization: organization, permalink: "my-server")
+        expect(described_class["my-org/my-server"]).to eq server
       end
     end
   end
