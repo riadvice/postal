@@ -22,4 +22,14 @@ describe Postal::MessageParser do
     expect(parser.new_body).to match(/^Hello world! https:\/\/click\.#{message.domain.name}/)
     expect(parser.tracked_links).to eq 1
   end
+
+  it "should strip the +notrack marker even when the track domain's DNS isn't OK" do
+    message = create_plain_text_message(server, "Hello world! http+notrack://github.com/atech/postal", "test@example.com")
+    create(:track_domain, server: server, domain: message.domain, dns_status: "Missing")
+    parser = Postal::MessageParser.new(message)
+    expect(parser.actioned?).to be true
+    expect(parser.new_body).not_to include("+notrack")
+    expect(parser.new_body).to include("http://github.com/atech/postal")
+    expect(parser.tracked_links).to eq 0
+  end
 end
