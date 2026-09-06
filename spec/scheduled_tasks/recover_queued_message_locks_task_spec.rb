@@ -12,10 +12,11 @@ RSpec.describe RecoverQueuedMessageLocksTask do
   end
 
   describe "#call" do
-    it "releases locks older than the lock timeout so the message is picked up again" do
-      message = create(:queued_message, :locked, locked_at: 11.minutes.ago, locked_by: "dead-worker")
+    it "releases locks older than the lock timeout and schedules a retry" do
+      message = create(:queued_message, :locked, locked_at: 11.minutes.ago, locked_by: "dead-worker", attempts: 2)
       task.call
-      expect(message.reload).to have_attributes(locked_by: nil, locked_at: nil)
+      expect(message.reload).to have_attributes(locked_by: nil, locked_at: nil, attempts: 3)
+      expect(message.retry_after).to be > Time.current
       expect(logger).to have_logged(/recovered 1 abandoned queued message locks/)
     end
 

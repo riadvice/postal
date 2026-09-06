@@ -5,7 +5,11 @@ class RecoverQueuedMessageLocksTask < ApplicationScheduledTask
 
   def call
     cutoff = Postal::Config.worker.queued_message_lock_timeout.seconds.ago
-    recovered = QueuedMessage.where.not(locked_by: nil).where(locked_at: ...cutoff).update_all(locked_by: nil, locked_at: nil)
+    recovered = 0
+    QueuedMessage.where.not(locked_by: nil).where(locked_at: ...cutoff).find_each do |message|
+      message.retry_later
+      recovered += 1
+    end
     logger.info "recovered #{recovered} abandoned queued message locks" if recovered.positive?
   end
 
