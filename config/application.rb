@@ -22,7 +22,7 @@ module Postal
     config.load_defaults 8.1
 
     # Rails 8 caps regexps at 1s, too short for DKIM/tracking scans on big messages
-    Regexp.timeout = nil
+    Regexp.timeout = 60
 
     # Disable most generators
     config.generators do |g|
