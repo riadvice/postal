@@ -73,8 +73,7 @@ module MessageDequeuer
       end
     end
 
-    # Extend the lock on every message still waiting in this batch so a
-    # long-running batch is never mistaken for an abandoned one.
+    # Stop a long batch from looking abandoned
     def renew_locks(messages)
       QueuedMessage.where(id: messages.map(&:id)).where.not(locked_at: nil).update_all(locked_at: Time.current)
     end

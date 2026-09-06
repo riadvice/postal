@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-# Releases queued message locks abandoned by a worker that died or hung so the
-# messages are picked up again. Live workers renew their locks while they
-# process a batch, so only genuinely abandoned locks reach the timeout.
+# Releases locks left behind by a dead or hung worker. Live workers renew theirs.
 class RecoverQueuedMessageLocksTask < ApplicationScheduledTask
 
   def call

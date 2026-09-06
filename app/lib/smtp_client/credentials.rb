@@ -17,7 +17,7 @@ module SMTPClient
       @auth_type = (auth_type.presence || :login).to_s.downcase.to_sym
     end
 
-    # Never expose the password when the object is logged or inspected
+    # Keep the password out of logs
     def inspect
       "#<#{self.class.name} username=#{@username.inspect} auth_type=#{@auth_type.inspect}>"
     end

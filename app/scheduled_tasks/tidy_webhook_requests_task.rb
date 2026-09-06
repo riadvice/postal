@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-# Releases webhook request locks left behind by a worker that died mid-delivery
-# so the request is retried instead of staying locked forever.
+# Releases locks left behind by a worker that died mid-delivery
 class TidyWebhookRequestsTask < ApplicationScheduledTask
 
   def call

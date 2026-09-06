@@ -2,14 +2,7 @@
 
 require "rails_helper"
 
-# Regression coverage for postalserver/postal#328 ("Cannot view queue for one
-# of the SMTP servers"). This was investigated and could not be reproduced
-# against the current codebase: HasMessage::ClassMethods#include_message
-# already scopes queued messages to a single server before checking for a
-# Postal::Error, and app/views/messages/_list.html.haml already renders a
-# "Deleted message" placeholder row when a queued message's underlying
-# message is missing (added in 2024, postalserver/postal#2872). This spec
-# locks in that existing (correct) behaviour.
+# postalserver/postal#328 could not be reproduced, this pins the current behaviour
 RSpec.describe "servers/queue", type: :view do
   let(:organization) { create(:organization) }
   let(:server) { create(:server, organization: organization) }

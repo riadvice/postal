@@ -240,8 +240,7 @@ class SMTPSender < BaseSender
     @connection_errors << error unless @connection_errors.include?(error)
   end
 
-  # The time allowed for a single connection attempt, never extending past
-  # the overall deadline for finding a server.
+  # Per-attempt limit, never past the overall deadline
   def connection_timeout_within(deadline)
     timeout = Postal::Config.smtp_client.connection_timeout
     deadline ? [timeout, deadline - monotonic_now].min : timeout

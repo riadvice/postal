@@ -13,8 +13,7 @@ module Postal
       track_domain = @message.server.track_domains.where(domain: @message.domain).first
       return unless track_domain
 
-      # Link/image tracking needs working DNS, but a literal `+notrack://`
-      # marker must be stripped from the outgoing message either way.
+      # Tracking needs working DNS but +notrack must be stripped regardless
       @domain = track_domain if track_domain.dns_status == "OK"
       @parsed_output = generate.split("\r\n\r\n", 2)
     end

@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 #
-# Switches a Postal docker-compose deployment from postalserver/postal to
-# riadvice/postal, running on the HOST (not inside the container — bin/postal
-# runs inside the container and has no access to the host's docker-compose.yml
-# or the docker CLI, so this can't be a `postal` subcommand).
+# Switches a docker-compose deployment from postalserver/postal to riadvice/postal.
+# Runs on the host, see docs/switch-to-riadvice-image.md.
 #
 # Usage: ./scripts/switch-to-riadvice-image.sh [tag] [compose-file]
-#   tag           Image tag to switch to (default: stable)
-#   compose-file  Path to docker-compose.yml (default: ./docker-compose.yml)
 #
 set -euo pipefail
 
