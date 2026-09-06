@@ -61,25 +61,6 @@ module Worker
           end
         end
 
-        context "when a queued message has been locked for longer than the lock timeout" do
-          it "recovers the lock and processes the message" do
-            allow(Postal::Config.worker).to receive(:queued_message_lock_timeout).and_return(600)
-            queued_message = create(:queued_message, :locked, ip_address: nil, retry_after: nil, locked_at: 11.minutes.ago, locked_by: "dead-worker")
-            job.call
-            expect(MessageDequeuer).to have_received(:process).with(queued_message, logger: kind_of(Klogger::Logger))
-            expect(queued_message.reload.locked_by).to match(/\A#{Postal.locker_name} [a-f0-9]{16}\z/)
-            expect(queued_message.locked_at).to be_within(1.second).of(Time.current)
-          end
-
-          it "leaves stale locks alone for IP addresses that are not ours" do
-            allow(Postal::Config.worker).to receive(:queued_message_lock_timeout).and_return(600)
-            queued_message = create(:queued_message, :locked, ip_address: create(:ip_address), locked_at: 11.minutes.ago, locked_by: "dead-worker")
-            job.call
-            expect(MessageDequeuer).to_not have_received(:process)
-            expect(queued_message.reload.locked_by).to eq "dead-worker"
-          end
-        end
-
         context "when there is a locked queued message without an IP address without a retry time" do
           it "does nothing" do
             queued_message = create(:queued_message, :locked, ip_address: nil, retry_after: nil)

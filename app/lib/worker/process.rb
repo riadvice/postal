@@ -40,6 +40,7 @@ module Worker
       ProcessMessageRetentionScheduledTask,
       PruneSuppressionListsScheduledTask,
       PruneWebhookRequestsScheduledTask,
+      RecoverQueuedMessageLocksTask,
       SendNotificationsScheduledTask,
       TidyQueuedMessagesTask,
       TidyWebhookRequestsTask,
