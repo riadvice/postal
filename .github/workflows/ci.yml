@@ -55,7 +55,6 @@ jobs:
     needs: [build]
     if: >-
       startsWith(github.ref, 'refs/heads/') &&
-      startsWith(github.ref, 'refs/heads/release-please-') != true &&
       startsWith(github.ref, 'refs/heads/dependabot/') != true
     steps:
       - uses: actions/checkout@v4
