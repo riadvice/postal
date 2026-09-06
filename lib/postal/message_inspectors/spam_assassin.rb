@@ -11,6 +11,7 @@ module Postal
 
       def inspect_message(inspection)
         data = nil
+        tcp_socket = nil
         raw_message = inspection.message.raw_message
         Timeout.timeout(15) do
           tcp_socket = TCPSocket.new(@config.host, @config.port)
@@ -24,17 +25,23 @@ module Postal
 
         spam_checks = []
         total = 0.0
-        rules = data ? data.split(/^---(.*)\r?\n/).last.split(/\r?\n/) : []
+        rules = []
+        if data
+          parts = data.split(/^---.*\r?\n/, -1)
+          raise "no report separator in spamd response" if parts.size < 2
+
+          rules = parts.last.split(/\r?\n/)
+        end
         while line = rules.shift
-          if line =~ /\A([- ]?[\d.]+)\s+(\w+)\s+(.*)/
+          if line =~ /\A([- ]?[\d.]+)\s+(\w+)(?:\s+(.*))?\z/
             total += ::Regexp.last_match(1).to_f
-            spam_checks << SpamCheck.new(::Regexp.last_match(2), ::Regexp.last_match(1).to_f, ::Regexp.last_match(3))
-          else
+            spam_checks << SpamCheck.new(::Regexp.last_match(2), ::Regexp.last_match(1).to_f, ::Regexp.last_match(3) || +"")
+          elsif spam_checks.last
             spam_checks.last.description << (" " + line.strip)
           end
         end
 
-        checks = spam_checks.reject { |s| EXCLUSIONS[inspection.scope].include?(s.code) }
+        checks = spam_checks.reject { |s| excluded?(s.code, inspection.scope) }
         checks.each do |check|
           inspection.spam_checks << check
         end
@@ -46,9 +53,17 @@ module Postal
         inspection.spam_checks << SpamCheck.new("ERROR", 0, "Error when scanning for spam")
       ensure
         begin
-          tcp_socket.close
+          tcp_socket&.close
         rescue StandardError
           nil
+        end
+      end
+
+      private
+
+      def excluded?(code, scope)
+        EXCLUSIONS[scope].any? do |exclusion|
+          exclusion.is_a?(Regexp) ? exclusion.match?(code) : exclusion == code
         end
       end
 
