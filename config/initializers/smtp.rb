@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "postal/config"
+require_relative "../../lib/postal/config"
 
 config = Postal::Config.smtp
 

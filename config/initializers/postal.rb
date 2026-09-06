@@ -1,3 +1,3 @@
 # frozen_string_literal: true
 
-require "postal"
+require_relative "../../lib/postal"

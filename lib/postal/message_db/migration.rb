@@ -33,7 +33,7 @@ module Postal
           next if start_from >= version
 
           puts "\e[45m++ Migrating #{klass_name} (#{version})\e[0m" unless silent
-          require "postal/message_db/migrations/#{version.to_s.rjust(2, '0')}_#{file}"
+          require File.join(__dir__, "migrations", "#{version.to_s.rjust(2, '0')}_#{file}")
           klass = Postal::MessageDB::Migrations.const_get(klass_name)
           instance = klass.new(database)
           instance.up
