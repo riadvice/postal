@@ -71,8 +71,11 @@ the same command you'd run for any Postal version upgrade — it's a no-op if
 there's nothing pending:
 
 ```bash
-docker compose run --rm postal postal upgrade
+docker compose run --rm runner postal upgrade
 ```
+
+`runner` is the one-off service in the official Postal install; if you use a
+compose file based on this repository's, the service is called `postal`.
 
 ## 4. Restart the app containers
 

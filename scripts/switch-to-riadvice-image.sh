@@ -22,25 +22,31 @@ echo "See docs/switch-to-riadvice-image.md for what this does and does not touch
 echo
 
 if grep -q '\${POSTAL_IMAGE}' "$COMPOSE_FILE" && [ -f "$ENV_FILE" ] && grep -q '^POSTAL_IMAGE=' "$ENV_FILE"; then
-  OLD_LINE="$(grep '^POSTAL_IMAGE=' "$ENV_FILE")"
-  echo "Found POSTAL_IMAGE in ${ENV_FILE}:"
-  echo "  - ${OLD_LINE}"
-  echo "  + POSTAL_IMAGE=${NEW_IMAGE}"
   TARGET_FILE="$ENV_FILE"
+  OLD_LINE="$(grep '^POSTAL_IMAGE=' "$ENV_FILE")"
   SED_EXPR="s#^POSTAL_IMAGE=.*#POSTAL_IMAGE=${NEW_IMAGE}#"
 elif grep -qE 'image:\s*.*postalserver/postal' "$COMPOSE_FILE"; then
-  OLD_LINE="$(grep -E 'image:\s*.*postalserver/postal' "$COMPOSE_FILE")"
-  echo "Found in ${COMPOSE_FILE}:"
-  echo "  - ${OLD_LINE}"
-  echo "  + $(echo "$OLD_LINE" | sed -E "s#[a-z0-9./]*postalserver/postal:[A-Za-z0-9._-]+#${NEW_IMAGE}#")"
   TARGET_FILE="$COMPOSE_FILE"
-  SED_EXPR="s#[a-z0-9./]*postalserver/postal:[A-Za-z0-9._-]+#${NEW_IMAGE}#"
+  OLD_LINE="$(grep -E 'image:\s*.*postalserver/postal' "$COMPOSE_FILE")"
+  SED_EXPR="s#[a-z0-9./]*postalserver/postal(:[A-Za-z0-9._-]+)?#${NEW_IMAGE}#"
 else
   echo "Could not confidently find a postalserver/postal image reference in" >&2
   echo "${COMPOSE_FILE} or ${ENV_FILE}. Not making any changes — follow the" >&2
   echo "manual steps in docs/switch-to-riadvice-image.md instead." >&2
   exit 1
 fi
+
+# The official install calls the one-off service "runner", this repo's compose file "postal"
+SERVICE="$(grep -oE '^ {2}(runner|postal):' "$COMPOSE_FILE" | head -1 | tr -d ' :' || true)"
+if [ -z "$SERVICE" ]; then
+  echo "Could not find a 'runner' or 'postal' service in ${COMPOSE_FILE} to run 'postal upgrade' with." >&2
+  echo "Not making any changes — follow the manual steps in docs/switch-to-riadvice-image.md instead." >&2
+  exit 1
+fi
+
+echo "Found in ${TARGET_FILE}:"
+echo "$OLD_LINE" | sed 's/^/  - /'
+echo "$OLD_LINE" | sed -E "$SED_EXPR" | sed 's/^/  + /'
 
 echo
 read -r -p "Apply this change and restart Postal? [y/N] " CONFIRM
@@ -56,7 +62,7 @@ sed -i.bak -E "$SED_EXPR" "$TARGET_FILE"
 echo "Updated ${TARGET_FILE} (previous version kept at ${TARGET_FILE}.bak)"
 
 echo "Running 'postal upgrade' (safe no-op if there's nothing pending)..."
-docker compose --file "$COMPOSE_FILE" run --rm postal postal upgrade
+docker compose --file "$COMPOSE_FILE" run --rm "$SERVICE" postal upgrade
 
 echo "Restarting..."
 docker compose --file "$COMPOSE_FILE" up -d
