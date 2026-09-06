@@ -79,9 +79,11 @@ module Postal
                     "Credentials are only ever sent over TLS: ssl_mode defaults to STARTTLS for them and None is refused"
         transform do |value|
           uri = URI.parse(value)
+          raise ArgumentError, "SMTP relay #{value.inspect} must be a smtp://host:port URL" if uri.scheme != "smtp" || uri.host.nil?
+
           query = uri.query ? CGI.parse(uri.query) : {}
           relay = {
-            host: uri.host,
+            host: uri.hostname,
             port: uri.port || 25,
             ssl_mode: query["ssl_mode"]&.first || "Auto"
           }
