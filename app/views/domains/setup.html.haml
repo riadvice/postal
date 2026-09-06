@@ -20,9 +20,8 @@
 .pageContent.pageContent--compact
   %h2.pageContent__title DNS Setup for #{@domain.name}
   %p.pageContent__intro.u-margin
-    Follow the instructions below to configure SPF & DKIM records for this domain.
-    We highly recommend that you do this to ensure your messages are delivered
-    correctly and quickly.
+    Configure the SPF and DKIM records below so your messages are delivered reliably and quickly.
+    Full setup details are in the #{link_to "official docs", "https://docs.postalserver.io", target: "_blank", rel: "noopener"}.
 
   .u-margin.buttonSet
     = link_to "Check my records are correct", [:check, organization, @server, @domain], :remote => true, :method => :post, :class => 'button'
@@ -41,9 +40,8 @@
       = @domain.spf_error
 
   %p.pageContent__text
-    You need to add a TXT record at the apex/root of your domain (@) with the following
-    content. If you already send mail from another service, you may just need to add
-    <b>include:#{Postal::Config.dns.spf_include}</b> to your existing record.
+    Add this as a TXT record at your domain's apex/root (@). Already have an SPF record from
+    another service? Just add <b>include:#{Postal::Config.dns.spf_include}</b> to it instead.
   %pre.codeBlock.u-margin= @domain.spf_record
 
   %h3.pageContent__subTitle DKIM Record
@@ -57,8 +55,7 @@
       = @domain.dkim_error
 
   %p.pageContent__text
-    You need to add a new TXT record with the name <b>#{@domain.dkim_record_name}</b>
-    with the following content.
+    Add a new TXT record named <b>#{@domain.dkim_record_name}</b> with this content.
   %pre.codeBlock.u-margin= @domain.dkim_record
 
   %h3.pageContent__subTitle Return Path
@@ -69,15 +66,15 @@
   - elsif @domain.return_path_status == 'Missing'
     %p.pageContent__text.u-grey.u-bold
       %span.label.label--grey OK
-      There's no return path for this domain. This is OK but we recommend adding the record to improve deliverability and achieve DMARC alignment.
+      No return path set up yet. Optional, but recommended for better deliverability and DMARC alignment.
   - elsif !@domain.return_path_status.nil?
     %p.pageContent__text.u-orange.u-bold
       %span.label.label--orange Warning
       = @domain.return_path_error
 
   %p.pageContent__text
-    This is optional but we recommend adding this to improve deliverability. You should add
-    a <b>CNAME</b> record at <b>#{@domain.return_path_domain}</b> to point to the hostname below.
+    Optional, but recommended for better deliverability. Add a <b>CNAME</b> record at
+    <b>#{@domain.return_path_domain}</b> pointing to:
   %pre.codeBlock.u-margin= Postal::Config.dns.return_path_domain
 
 
@@ -89,14 +86,13 @@
   - elsif @domain.mx_status == 'Missing'
     %p.pageContent__text.u-grey.u-bold
       %span.label.label--grey OK
-      None of the MX records for this domain point to us. Incoming mail won't be sent to us.
+      No MX records point here yet, so we won't receive incoming mail for this domain.
   - elsif !@domain.mx_status.nil?
     %p.pageContent__text.u-orange.u-bold
       %span.label.label--orange Warning
       = @domain.mx_error
 
   %p.pageContent__text
-    If you wish to receive incoming e-mail for this domain, you need to add the following MX records
-    to the domain. You don't have to do this and we'll only tell you if they're set up or not. Both
-    records should be priority <b>10</b>.
+    Only needed if you want to receive incoming mail for this domain. Add both records below at
+    priority <b>10</b>.
   %pre.codeBlock.u-margin= Postal::Config.dns.mx_records.join("\n")
