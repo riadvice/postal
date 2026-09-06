@@ -160,6 +160,12 @@ module Postal
         description "The number of threads to execute within each worker"
         default 2
       end
+
+      integer :queued_message_lock_timeout do
+        description "The number of seconds a queued message may stay locked without progress before the lock is assumed abandoned (worker died or hung) " \
+                    "and released. Must exceed smtp_client.start_timeout plus smtp_client.transaction_timeout."
+        default 900
+      end
     end
 
     group :main_db do
@@ -525,12 +531,6 @@ module Postal
         description "The read timeout for outgoing SMTP connections"
         default 30
       end
-    end
-
-    group :migration_waiter do
-      boolean :enabled do
-        description "Wait for all migrations to run before starting a process"
-        default false
 
       integer :connection_timeout do
         description "The hard limit in seconds for establishing one outgoing SMTP session (connect, greeting, EHLO, STARTTLS and AUTH)"
@@ -546,6 +546,12 @@ module Postal
         description "The hard limit in seconds for one outgoing SMTP transaction (MAIL FROM, RCPT TO and DATA). RFC 5321 recommends allowing at least 10 minutes for DATA"
         default 600
       end
+    end
+
+    group :migration_waiter do
+      boolean :enabled do
+        description "Wait for all migrations to run before starting a process"
+        default false
       end
 
       integer :attempts do

@@ -19,8 +19,11 @@ module MessageDequeuer
 
             # Process the original message and then all of those
             # found for batching.
-            process_message(@queued_message)
-            @other_messages&.each { |message| process_message(message) }
+            messages = [@queued_message, *@other_messages]
+            messages.each_with_index do |message, index|
+              renew_locks(messages[index..])
+              process_message(message)
+            end
           end
         ensure
           @state.finished
@@ -68,6 +71,12 @@ module MessageDequeuer
       logger.tagged(queued_message: queued_message.id) do
         SingleMessageProcessor.process(queued_message, logger: @logger, state: @state)
       end
+    end
+
+    # Extend the lock on every message still waiting in this batch so a
+    # long-running batch is never mistaken for an abandoned one.
+    def renew_locks(messages)
+      QueuedMessage.where(id: messages.map(&:id)).where.not(locked_at: nil).update_all(locked_at: Time.current)
     end
 
   end

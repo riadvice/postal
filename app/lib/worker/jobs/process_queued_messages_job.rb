@@ -9,6 +9,7 @@ module Worker
         @locker = Postal.locker_name_with_suffix(SecureRandom.hex(8))
 
         find_ip_addresses
+        recover_stale_locks
         lock_message_for_processing
         obtain_locked_messages
         process_messages
@@ -37,6 +38,20 @@ module Worker
       # @return [Boolean]
       def local_ip?(ip)
         !!(ip =~ /\A(127\.|fe80:|::)/)
+      end
+
+      # Release locks abandoned by a worker that died or hung so those messages
+      # can be picked up again. Live workers renew their locks while processing,
+      # so only genuinely abandoned locks reach the timeout.
+      #
+      # @return [void]
+      def recover_stale_locks
+        cutoff = Postal::Config.worker.queued_message_lock_timeout.seconds.ago
+        recovered = QueuedMessage.where(ip_address_id: [nil, @ip_addresses])
+                                 .where(locked_at: ...cutoff)
+                                 .update_all(locked_by: nil, locked_at: nil)
+
+        logger.info "recovered #{recovered} stale queued message locks" if recovered.positive?
       end
 
       # Obtain a queued message from the database for processing

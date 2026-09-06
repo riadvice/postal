@@ -71,6 +71,15 @@ module MessageDequeuer
           end
           processor.process
         end
+
+        it "renews the locks of the messages still to be processed before each one" do
+          allow(SingleMessageProcessor).to receive(:process)
+          queued_message.update_columns(locked_at: 20.minutes.ago)
+          processor.process
+          [queued_message, @queued_message2, @queued_message3].each do |msg|
+            expect(msg.reload.locked_at).to be_within(2.seconds).of(Time.current)
+          end
+        end
       end
 
       context "when postal.batch_queued_messages is disabled" do
