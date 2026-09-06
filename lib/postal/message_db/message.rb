@@ -505,7 +505,7 @@ module Postal
       def original_messages
         return nil unless bounce
 
-        other_message_ids = raw_message.scan(/\X-Postal-MsgID:\s*([a-z0-9]+)/i).flatten
+        other_message_ids = raw_message.scan(/X-Postal-MsgID:\s*([a-z0-9]+)/i).flatten
         if other_message_ids.empty?
           []
         else
