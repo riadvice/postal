@@ -12,8 +12,10 @@ module Postal
       @tracked_images = 0
       @domain = @message.server.track_domains.where(domain: @message.domain, dns_status: "OK").first
 
-      return unless @domain
-
+      # We always run the body through `generate` (even when there's no
+      # usable track domain) so that a literal `+notrack://` marker gets
+      # stripped from the outgoing message regardless of whether link/image
+      # tracking itself can run right now.
       @parsed_output = generate.split("\r\n\r\n", 2)
     end
 
@@ -85,15 +87,15 @@ module Postal
     end
 
     def parse(part, type = nil)
-      if @domain.track_clicks?
+      if @domain&.track_clicks?
         part = insert_links(part, type)
       end
 
-      if @domain.track_loads? && type == :html
+      if @domain&.track_loads? && type == :html
         part = insert_tracking_image(part)
       end
 
-      part
+      strip_notrack_marker(part)
     end
 
     def insert_links(part, type = nil)
@@ -127,6 +129,10 @@ module Postal
         end
       end
 
+      part
+    end
+
+    def strip_notrack_marker(part)
       part.gsub!(/(https?)\+notrack:\/\//) do
         @actioned = true
         "#{::Regexp.last_match(1)}://"
