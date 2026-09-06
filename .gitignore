@@ -37,3 +37,5 @@ BRANCH
 node_modules
 yarn.lock
 
+/coverage
+

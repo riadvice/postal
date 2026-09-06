@@ -1,5 +1,21 @@
 # frozen_string_literal: true
 
+if ENV["COVERAGE"]
+  require "simplecov"
+  require "simplecov-cobertura"
+
+  SimpleCov.formatters = [
+    SimpleCov::Formatter::HTMLFormatter,
+    SimpleCov::Formatter::CoberturaFormatter,
+  ]
+  SimpleCov.start "rails" do
+    enable_coverage :branch
+    skip "/bin/"
+    skip "/script/"
+    skip "/db/"
+  end
+end
+
 ENV["POSTAL_CONFIG_FILE_PATH"] ||= "config/postal/postal.test.yml"
 
 require "dotenv"
