@@ -22,9 +22,10 @@ Switching is just a matter of changing which image tag your deployment pulls.
 ## Automated option
 
 [`scripts/switch-to-riadvice-image.sh`](../scripts/switch-to-riadvice-image.sh)
-does steps 2–4 below for you: it finds your `docker-compose.yml`'s image
+does steps 1–4 below for you: it finds your `docker-compose.yml`'s image
 reference (or a `POSTAL_IMAGE` variable in a neighbouring `.env` file), shows
-you the exact one-line change, asks for confirmation, then pulls, runs
+you the exact one-line change, asks for confirmation, pulls the new image
+before changing anything, then edits (keeping a `.bak` copy), runs
 `postal upgrade`, and restarts.
 
 ```bash
@@ -44,9 +45,10 @@ this repo (or copy it alongside your own `docker-compose.yml`).
 docker pull riadvice/postal:stable
 ```
 
-Other tags are also published: `latest` (tracks `main`), `branch-<name>` for
-non-main branches, and `<version>` for a specific release — pick whichever
-matches how you're currently pinning the upstream image.
+`stable` and `<version>` (e.g. `3.4.0`) are published whenever a release tag is
+pushed to the repository, so they only exist once at least one tag has been
+pushed. `latest` tracks `main` and `branch-<name>` tracks other branches — pick
+whichever matches how you're currently pinning the upstream image.
 
 ## 2. Change only the image reference
 

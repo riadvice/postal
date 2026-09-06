@@ -49,11 +49,11 @@ if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
   exit 0
 fi
 
-sed -i.bak -E "$SED_EXPR" "$TARGET_FILE"
-rm -f "${TARGET_FILE}.bak"
+echo "Pulling ${NEW_IMAGE} before touching anything..."
+docker pull "$NEW_IMAGE"
 
-echo "Updated ${TARGET_FILE}. Pulling the new image..."
-docker compose --file "$COMPOSE_FILE" pull
+sed -i.bak -E "$SED_EXPR" "$TARGET_FILE"
+echo "Updated ${TARGET_FILE} (previous version kept at ${TARGET_FILE}.bak)"
 
 echo "Running 'postal upgrade' (safe no-op if there's nothing pending)..."
 docker compose --file "$COMPOSE_FILE" run --rm postal postal upgrade
@@ -62,5 +62,5 @@ echo "Restarting..."
 docker compose --file "$COMPOSE_FILE" up -d
 
 echo
-echo "Done. To roll back, restore ${TARGET_FILE} from its previous value and re-run"
+echo "Done. To roll back, restore ${TARGET_FILE}.bak over ${TARGET_FILE} and re-run"
 echo "'docker compose up -d' — see docs/switch-to-riadvice-image.md for details."
