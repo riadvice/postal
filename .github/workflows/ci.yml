@@ -27,13 +27,12 @@ jobs:
       - uses: docker/setup-buildx-action@v2
       - uses: docker/login-action@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v4
         with:
           push: true
-          tags: ghcr.io/postalserver/postal:ci-${{ github.sha }}
+          tags: riadvice/postal:ci-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           target: ci
@@ -49,15 +48,14 @@ jobs:
           fetch-depth: 0
       - uses: docker/login-action@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - run: docker compose pull
         env:
-          POSTAL_IMAGE: ghcr.io/postalserver/postal:ci-${{ github.sha }}
+          POSTAL_IMAGE: riadvice/postal:ci-${{ github.sha }}
       - run: docker compose run postal sh -c 'bundle exec rspec'
         env:
-          POSTAL_IMAGE: ghcr.io/postalserver/postal:ci-${{ github.sha }}
+          POSTAL_IMAGE: riadvice/postal:ci-${{ github.sha }}
 
   release-branch:
     name: Release (branch)
@@ -75,12 +73,11 @@ jobs:
       - uses: docker/setup-buildx-action@v2
       - uses: docker/login-action@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - id: info
         run: |
-          IMAGE=ghcr.io/postalserver/postal
+          IMAGE=riadvice/postal
 
           REF="${GITHUB_REF#refs/heads/}"
           if [ -z "$REF" ]; then exit 1; fi
@@ -119,15 +116,14 @@ jobs:
       - uses: docker/setup-buildx-action@v2
       - uses: docker/login-action@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v4
         with:
           push: true
           tags: |
-            ghcr.io/postalserver/postal:stable
-            ghcr.io/postalserver/postal:${{ needs.release-please.outputs.version }}
+            riadvice/postal:stable
+            riadvice/postal:${{ needs.release-please.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           target: full
