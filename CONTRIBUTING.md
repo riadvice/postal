@@ -6,7 +6,11 @@ This doc explains how to go about running Postal in development to allow you to 
 
 You will need a MySQL database server to get started. Postal needs to be able to make databases within that server whenever new mail servers are created so the permissions that you use should be suitable for that.
 
-You'll also need Ruby. Postal currently uses Ruby 3.2.2. Install that using whichever version manager takes your fancy - rbenv, asdf, rvm etc.
+You'll also need Ruby. Postal currently uses Ruby 4.0.6 (see `.ruby-version`). Install that using whichever version manager takes your fancy - rbenv, asdf, rvm etc.
+
+## Releasing
+
+Push a tag named after the version (for example `3.4.0`) and CI publishes `riadvice/postal:stable` and `riadvice/postal:3.4.0` to Docker Hub.
 
 ## Clone
 
