@@ -17,8 +17,7 @@
       .fieldSet__input
         = f.select :ssl_mode, SMTPEndpoint::SSL_MODES, {}, :class => 'input input--select'
         %p.fieldSet__text
-          Choose what, if any, SSL mode you'd like to use when delivering mail to this mail server.
-          Be aware that any mail sent with no SSL is insecure and not protected in anyway.
+          SSL mode to use when delivering mail to this server. Without SSL, mail is sent unencrypted.
 
   .fieldSetSubmit.buttonSet
     = f.submit @smtp_endpoint.new_record? ? "Create SMTP endpoint" : "Save SMTP endpoint", :class => 'button button--positive js-form-submit'
