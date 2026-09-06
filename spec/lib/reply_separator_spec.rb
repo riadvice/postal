@@ -201,7 +201,6 @@ RSpec.describe ReplySeparator do
       let(:text) { "Thanks\n\n> From: John\n> Sent: Monday\n" }
 
       it "strips the quoted block" do
-        pending "reply_separator.rb:8 allows a '>' prefix before From: but not before Sent:"
         expect(body).to eq "Thanks"
         expect(stripped).to eq "> From: John\n> Sent: Monday"
       end
@@ -257,7 +256,6 @@ RSpec.describe ReplySeparator do
       let(:text) { "Danke\n\n-----Ursprüngliche Nachricht-----\nVon: Hans\n" }
 
       it "strips the header" do
-        pending "reply_separator.rb:10 requires a literal space after the closing dashes"
         expect(body).to eq "Danke"
         expect(stripped).to eq "-----Ursprüngliche Nachricht-----\nVon: Hans"
       end
@@ -268,13 +266,8 @@ RSpec.describe ReplySeparator do
     context "with a typical Apple Mail header" do
       let(:text) { "Bonjour\n\nLe 12 mars 2024 à 10:00, Jean Dupont <jean@example.fr> a écrit :\n\n> Ligne 1\n> Ligne 2\n" }
 
-      it "strips the header line" do
-        expect(stripped).to eq "Le 12 mars 2024 à 10:00, Jean Dupont <jean@example.fr> a écrit :"
-        expect(body).to start_with("Bonjour")
-      end
-
-      it "strips the quoted lines that follow the header" do
-        pending "reply_separator.rb:11 lacks the /m flag so the trailing .* stops at the end of the header line"
+      it "strips the header line and the quoted lines that follow" do
+        expect(stripped).to eq "Le 12 mars 2024 à 10:00, Jean Dupont <jean@example.fr> a écrit :\n\n> Ligne 1\n> Ligne 2"
         expect(body).to eq "Bonjour"
       end
     end
