@@ -73,15 +73,18 @@ class IPPoolRule < ApplicationRecord
     def address_matches?(condition, address)
       address = Postal::Helpers.strip_name_from_address(address)
       if condition =~ /@/
-        parts = address.split("@")
-        domain = parts.pop
-        uname = parts.join("@")
-        uname, = uname.split("+", 2)
-        condition == "#{uname}@#{domain}"
+        without_tag(condition).casecmp?(without_tag(address))
       else
         # Match as a domain
-        condition == address.split("@").last
+        condition.casecmp?(address.split("@").last.to_s)
       end
+    end
+
+    def without_tag(address)
+      parts = address.split("@")
+      domain = parts.pop
+      uname, = parts.join("@").split("+", 2)
+      "#{uname}@#{domain}"
     end
 
   end
