@@ -89,18 +89,18 @@ module SMTPServer
 
     def handle_command(data)
       case data
-      when /^QUIT/i           then quit
-      when /^STARTTLS/i       then starttls
-      when /^EHLO/i           then ehlo(data)
-      when /^HELO/i           then helo(data)
-      when /^RSET/i           then rset
-      when /^NOOP/i           then noop
-      when /^AUTH PLAIN/i     then auth_plain(data)
-      when /^AUTH LOGIN/i     then auth_login(data)
-      when /^AUTH CRAM-MD5/i  then auth_cram_md5(data)
-      when /^MAIL FROM/i      then mail_from(data)
-      when /^RCPT TO/i        then rcpt_to(data)
-      when /^DATA/i           then data(data)
+      when /\AQUIT/i           then quit
+      when /\ASTARTTLS/i       then starttls
+      when /\AEHLO/i           then ehlo(data)
+      when /\AHELO/i           then helo(data)
+      when /\ARSET/i           then rset
+      when /\ANOOP/i           then noop
+      when /\AAUTH PLAIN/i     then auth_plain(data)
+      when /\AAUTH LOGIN/i     then auth_login(data)
+      when /\AAUTH CRAM-MD5/i  then auth_cram_md5(data)
+      when /\AMAIL FROM/i      then mail_from(data)
+      when /\ARCPT TO/i        then rcpt_to(data)
+      when /\ADATA/i           then data(data)
       else
         increment_error_count("invalid-command")
         "502 Invalid/unsupported command"
@@ -117,7 +117,7 @@ module SMTPServer
 
     def proxy(data)
       # inet-protocol, client-ip, proxy-ip, client-port, proxy-port
-      if m = data.match(/\APROXY (.+) (.+) (.+) (.+) (.+)\z/)
+      if m = data.match(/\APROXY (\S+) (\S+) (\S+) (\S+) (\S+)\z/)
         @ip_address = m[2]
         check_ip_address
         @state = :welcome
@@ -250,6 +250,11 @@ module SMTPServer
       handler = proc do |idata|
         @proc = nil
         username, password = Base64.decode64(idata).split(" ", 2).map { |a| a.chomp }
+        if username.blank?
+          increment_error_count("invalid-credentials")
+          next "535 Denied"
+        end
+
         org_permlink, server_permalink = username.split(/[\/_]/, 2)
         server = ::Server.includes(:organization).where(organizations: { permalink: org_permlink }, permalink: server_permalink).first
         if server.nil?
@@ -291,15 +296,19 @@ module SMTPServer
 
       @state = :mail_from_received
       transaction_reset
-      if data =~ /AUTH=/
-        # Discard AUTH= parameter and anything that follows.
-        # We don't need this parameter as we don't trust any client to set it
-        mail_from_line = data.sub(/ *AUTH=.*/, "")
-      else
-        mail_from_line = data
-      end
-      @mail_from = mail_from_line.gsub(/MAIL FROM\s*:\s*/i, "").gsub(/.*</, "").gsub(/>.*/, "").strip
+      @mail_from = extract_address(data, "MAIL FROM")
       "250 OK"
+    end
+
+    # The address from "MAIL FROM:<a@b> SIZE=1" or "RCPT TO: a@b NOTIFY=NEVER", ignoring any parameters
+    def extract_address(data, command)
+      rest = data.sub(/\A#{command}\s*:?\s*/i, "")
+      if rest.start_with?("<")
+        address = rest[1..].split(">", 2).first.to_s.split("<").last.to_s
+      else
+        address = rest.split(/\s+/, 2).first.to_s.delete("<>")
+      end
+      address.strip
     end
 
     def rcpt_to(data)
@@ -308,7 +317,7 @@ module SMTPServer
         return "503 EHLO/HELO and MAIL FROM first please"
       end
 
-      rcpt_to = data.gsub(/RCPT TO\s*:\s*/i, "").gsub(/.*</, "").gsub(/>.*/, "").strip
+      rcpt_to = extract_address(data, "RCPT TO")
 
       if rcpt_to.blank?
         increment_error_count("empty-rcpt-to")
@@ -324,7 +333,7 @@ module SMTPServer
 
       uname, tag = uname.split("+", 2)
 
-      if domain == Postal::Config.dns.return_path_domain || domain =~ /\A#{Regexp.escape(Postal::Config.dns.custom_return_path_prefix)}\./
+      if domain.casecmp?(Postal::Config.dns.return_path_domain) || domain =~ /\A#{Regexp.escape(Postal::Config.dns.custom_return_path_prefix)}\./i
         # This is a return path
         @state = :rcpt_to_received
         if server = ::Server.where(token: uname).first
@@ -469,7 +478,7 @@ module SMTPServer
         return format("552 Message too large (maximum size %dMB)", Postal::Config.smtp_server.max_message_size)
       end
 
-      if @headers["received"].grep(/by #{Postal::Config.postal.smtp_hostname}/).count > 4
+      if @headers["received"].grep(/by #{Regexp.escape(Postal::Config.postal.smtp_hostname)}/).count > 4
         transaction_reset
         @state = :welcomed
         increment_error_count("loop-detected")
@@ -550,7 +559,7 @@ module SMTPServer
     def sanitize_input_for_log(data)
       if @password_expected_next
         @password_expected_next = false
-        if data =~ /\A[a-z0-9]{3,}=*\z/i
+        if data =~ /\A[a-z0-9+\/]{3,}=*\z/i
           return LOG_REDACTION_STRING
         end
       end

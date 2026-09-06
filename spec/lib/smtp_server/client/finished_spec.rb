@@ -68,6 +68,83 @@ module SMTPServer
         end
       end
 
+      describe "loop detection" do
+        let(:credential) { nil }
+        let(:rcpt_to) { "#{server.token}@#{Postal::Config.dns.return_path_domain}" }
+        let(:hostname) { Postal::Config.postal.smtp_hostname }
+
+        def send_message(received_headers)
+          client.handle("DATA")
+          received_headers.each { |header| client.handle("Received: #{header}") }
+          client.handle("Subject: Test")
+          client.handle("")
+          client.handle("This is a test message")
+          client.handle("\r")
+          client.handle(".\r")
+        end
+
+        it "accepts a message with three received headers from this host" do
+          expect(send_message(["from a by #{hostname}"] * 3)).to eq "250 OK"
+        end
+
+        it "rejects a message with four received headers from this host" do
+          expect(send_message(["from a by #{hostname}"] * 4)).to eq "550 Loop detected"
+          expect(client.state).to eq :welcomed
+          expect(client.recipients).to eq []
+        end
+
+        it "counts received headers with the host anywhere in the value" do
+          expect(send_message(["from a by #{hostname} with SMTP; date", "by #{hostname}", "from b by #{hostname} (Postal)", "x by #{hostname}y"])).to eq "550 Loop detected"
+        end
+
+        it "counts received headers from a host that starts with this host" do
+          expect(send_message(["from a by #{hostname}.evil.com"] * 4)).to eq "550 Loop detected"
+        end
+
+        it "does not count received headers from a host that ends with this host" do
+          expect(send_message(["from a by mail.#{hostname}"] * 10)).to eq "250 OK"
+        end
+
+        it "counts received headers split over continuation lines" do
+          client.handle("DATA")
+          4.times do
+            client.handle("Received: from a")
+            client.handle(" by #{hostname}")
+          end
+          client.handle("")
+          client.handle("\r")
+          expect(client.handle(".\r")).to eq "550 Loop detected"
+        end
+
+        it "does not count received headers from other hosts" do
+          expect(send_message(["from a by other.example.com"] * 10)).to eq "250 OK"
+        end
+
+        it "does not count received headers where the host is not preceded by by" do
+          expect(send_message(["from #{hostname} by other.example.com"] * 10)).to eq "250 OK"
+        end
+
+        it "does not count received headers with more than one space before the host" do
+          expect(send_message(["from a by  #{hostname}"] * 10)).to eq "250 OK"
+        end
+
+        it "does not count received headers with the host in a different case" do
+          expect(send_message(["from a by #{hostname.upcase}"] * 10)).to eq "250 OK"
+        end
+
+        it "does not count other headers mentioning the host" do
+          client.handle("DATA")
+          10.times { client.handle("X-Received: from a by #{hostname}") }
+          client.handle("")
+          client.handle("\r")
+          expect(client.handle(".\r")).to eq "250 OK"
+        end
+
+        it "does not count received headers where a dot in the hostname is another character" do
+          expect(send_message(["from a by #{hostname.tr('.', '-')}"] * 10)).to eq "250 OK"
+        end
+      end
+
       context "when the email content is not suitable for the credential" do
         it "returns an error and resets the state" do
           client.handle("DATA")
