@@ -320,7 +320,16 @@ module Postal
       # Return all attachments for this message
       #
       def attachments
-        mail&.attachments || []
+        return [] unless mail
+
+        real_attachments = mail.attachments
+        return real_attachments unless real_attachments.empty? && mail.attachment?
+
+        # A non-multipart message whose entire body is the attachment (e.g. a
+        # `Content-Disposition: attachment` part with no surrounding
+        # multipart structure) isn't picked up by Mail::Message#attachments,
+        # which only looks at multipart parts.
+        [mail]
       end
 
       #
