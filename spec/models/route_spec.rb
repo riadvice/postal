@@ -94,5 +94,12 @@ RSpec.describe Route do
       route = build(:route, server: server, domain: nil, name: "__returnpath__", mode: "Endpoint", endpoint: create(:http_endpoint, server: server))
       expect(route).to be_valid
     end
+
+    it "does not stop the whole server from being destroyed" do
+      endpoint = create(:http_endpoint, server: server)
+      create(:route, server: server, domain: nil, name: "__returnpath__", mode: "Endpoint", endpoint: endpoint)
+      expect { server.destroy! }.not_to raise_error
+      expect(HTTPEndpoint.exists?(endpoint.id)).to be false
+    end
   end
 end

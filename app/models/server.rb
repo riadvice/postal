@@ -56,10 +56,12 @@ class Server < ApplicationRecord
   belongs_to :ip_pool, optional: true
   has_many :domains, dependent: :destroy, as: :owner
   has_many :credentials, dependent: :destroy
+  # Routes must go before endpoints: an endpoint refuses to be destroyed
+  # while the return path route still points at it.
+  has_many :routes, dependent: :destroy
   has_many :smtp_endpoints, dependent: :destroy
   has_many :http_endpoints, dependent: :destroy
   has_many :address_endpoints, dependent: :destroy
-  has_many :routes, dependent: :destroy
   has_many :queued_messages, dependent: :delete_all
   has_many :webhooks, dependent: :destroy
   has_many :webhook_requests, dependent: :destroy
