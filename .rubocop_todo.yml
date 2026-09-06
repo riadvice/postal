@@ -15,7 +15,6 @@ Layout/EmptyLineAfterMagicComment:
     - 'config/initializers/backtrace_silencers.rb'
     - 'config/initializers/content_security_policy.rb'
     - 'config/initializers/mime_types.rb'
-    - 'config/initializers/new_framework_defaults_7_0.rb'
     - 'config/initializers/permissions_policy.rb'
     - 'db/seeds.rb'
 
