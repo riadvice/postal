@@ -168,8 +168,8 @@ module Postal
 
       integer :queued_message_lock_timeout do
         description "The number of seconds a queued message may stay locked without progress before the lock is assumed abandoned (worker died or hung) " \
-                    "and released. Must exceed smtp_client.start_timeout plus smtp_client.transaction_timeout."
-        default 900
+                    "and released. Must be at least 5 minutes more than smtp_client.start_timeout plus smtp_client.transaction_timeout."
+        default 1800
       end
     end
 
