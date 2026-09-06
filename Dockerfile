@@ -1,4 +1,4 @@
-FROM ruby:3.4.6-slim-bookworm AS base
+FROM ruby:4.0.6-slim-bookworm AS base
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN apt-get update \
@@ -6,7 +6,7 @@ RUN apt-get update \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-RUN (curl -sL https://deb.nodesource.com/setup_20.x | bash -)
+RUN (curl -sL https://deb.nodesource.com/setup_24.x | bash -)
 
 # Install main dependencies
 RUN apt-get update && \
