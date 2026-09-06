@@ -99,18 +99,16 @@ module Postal
 
     def insert_links(part, type = nil)
       if type == :text
-        part.gsub!(/(#{URL_REGEX})(?=\s|$)/) do
-          if track_domain?($~[:domain])
+        part.gsub!(/(#{URL_REGEX})(?=[\s,!]|$)/) do
+          match = ::Regexp.last_match
+          trailing = match[:url][/[^\w]+\z/].to_s
+          url = match[:url].delete_suffix(trailing)
+          if track_domain?(match[:domain].sub(/\.+\z/, ""))
             @tracked_links += 1
-            url = $~[:url]
-            while url =~ /[^\w]$/
-              theend = url.size - 2
-              url = url[0..theend]
-            end
             token = @message.create_link(url)
-            "#{domain}/#{@message.server.token}/#{token}"
+            "#{domain}/#{@message.server.token}/#{token}#{trailing}"
           else
-            ::Regexp.last_match(0)
+            match[0]
           end
         end
       end
