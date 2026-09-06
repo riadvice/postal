@@ -10,12 +10,12 @@ module Postal
       @actioned = false
       @tracked_links = 0
       @tracked_images = 0
-      @domain = @message.server.track_domains.where(domain: @message.domain, dns_status: "OK").first
+      track_domain = @message.server.track_domains.where(domain: @message.domain).first
+      return unless track_domain
 
-      # We always run the body through `generate` (even when there's no
-      # usable track domain) so that a literal `+notrack://` marker gets
-      # stripped from the outgoing message regardless of whether link/image
-      # tracking itself can run right now.
+      # Link/image tracking needs working DNS, but a literal `+notrack://`
+      # marker must be stripped from the outgoing message either way.
+      @domain = track_domain if track_domain.dns_status == "OK"
       @parsed_output = generate.split("\r\n\r\n", 2)
     end
 
