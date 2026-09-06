@@ -44,7 +44,6 @@ describe UserInvite do
     it { is_expected.to_not allow_value(nil).for(:email_address) }
 
     it "rejects an address without a local part or domain" do
-      pending "the format check only requires an @ to be present"
       expect(invite).not_to allow_value("@").for(:email_address)
     end
   end
