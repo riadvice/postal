@@ -21,14 +21,11 @@
 class SMTPEndpoint < ApplicationRecord
 
   include HasUUID
+  include HasRoutes
 
   belongs_to :server
-  has_many :routes, as: :endpoint
-  has_many :additional_route_endpoints, dependent: :destroy, as: :endpoint
 
   SSL_MODES = %w[None Auto STARTTLS TLS].freeze
-
-  before_destroy :update_routes
 
   validates :name, presence: true
   validates :hostname, presence: true, format: /\A[a-z0-9.-]*\z/
@@ -41,15 +38,6 @@ class SMTPEndpoint < ApplicationRecord
 
   def mark_as_used
     update_column(:last_used_at, Time.now)
-  end
-
-  def update_routes
-    if routes.any?(&:return_path?)
-      errors.add(:base, "This endpoint is used by the return path route and cannot be deleted")
-      throw :abort
-    end
-
-    routes.each { |r| r.update(endpoint: nil, mode: "Reject") }
   end
 
   def to_smtp_client_server

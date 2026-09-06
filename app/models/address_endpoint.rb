@@ -16,26 +16,14 @@
 class AddressEndpoint < ApplicationRecord
 
   include HasUUID
+  include HasRoutes
 
   belongs_to :server
-  has_many :routes, as: :endpoint
-  has_many :additional_route_endpoints, dependent: :destroy, as: :endpoint
 
   validates :address, presence: true, format: { with: /@/ }, uniqueness: { scope: [:server_id], message: "has already been added", case_sensitive: false }
 
-  before_destroy :update_routes
-
   def mark_as_used
     update_column(:last_used_at, Time.now)
-  end
-
-  def update_routes
-    if routes.any?(&:return_path?)
-      errors.add(:base, "This endpoint is used by the return path route and cannot be deleted")
-      throw :abort
-    end
-
-    routes.each { |r| r.update(endpoint: nil, mode: "Reject") }
   end
 
   def description
