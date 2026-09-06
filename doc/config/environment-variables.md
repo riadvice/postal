@@ -16,10 +16,11 @@ This document contains all the environment variables which are available for thi
 | `POSTAL_USE_LOCAL_NS_FOR_DOMAIN_VERIFICATION` | Boolean | Domain verification and checking usually checks with a domain's nameserver. Enable this to check with the server's local nameservers. | false |
 | `POSTAL_USE_RESENT_SENDER_HEADER` | Boolean | Append a Resend-Sender header to all outgoing e-mails | true |
 | `POSTAL_SIGNING_KEY_PATH` | String | Path to the private key used for signing | $config-file-root/signing.key |
-| `POSTAL_SMTP_RELAYS` | Array of strings | An array of SMTP relays in the format of smtp://host:port | [] |
+| `POSTAL_SMTP_RELAYS` | Array of strings | An array of SMTP relays in the format of smtp://host:port?ssl_mode=Auto. Relays that require authentication use smtp://username:password@host:port?auth_type=login (percent-encode the credentials; auth_type may be plain, login or cram_md5) | [] |
 | `POSTAL_TRUSTED_PROXIES` | Array of strings | An array of IP addresses to trust for proxying requests to Postal (in addition to localhost addresses) | [] |
 | `POSTAL_ALLOWED_REQUEST_DESTINATIONS` | Array of strings | Hostnames or IP/CIDR ranges that outbound webhook and HTTP endpoint requests are permitted to reach even when they resolve to a private, loopback, link-local or otherwise reserved address. All other such destinations are blocked to prevent SSRF. | [] |
 | `POSTAL_QUEUED_MESSAGE_LOCK_STALE_DAYS` | Integer | The number of days after which to consider a lock as stale. Messages with stale locks will be removed and not retried. | 1 |
+| `POSTAL_WEBHOOK_REQUEST_LOCK_STALE_MINUTES` | Integer | The number of minutes after which a webhook request lock is considered stale. Stale locks are released so the request is retried. | 60 |
 | `POSTAL_BATCH_QUEUED_MESSAGES` | Boolean | When enabled queued messages will be de-queued in batches based on their destination | true |
 | `WEB_SERVER_DEFAULT_PORT` | Integer | The default port the web server should listen on unless overriden by the PORT environment variable | 5000 |
 | `WEB_SERVER_DEFAULT_BIND_ADDRESS` | String | The default bind address the web server should listen on unless overriden by the BIND_ADDRESS environment variable | 127.0.0.1 |
@@ -27,6 +28,7 @@ This document contains all the environment variables which are available for thi
 | `WORKER_DEFAULT_HEALTH_SERVER_PORT` | Integer | The default port for the worker health server to listen on | 9090 |
 | `WORKER_DEFAULT_HEALTH_SERVER_BIND_ADDRESS` | String | The default bind address for the worker health server to listen on | 127.0.0.1 |
 | `WORKER_THREADS` | Integer | The number of threads to execute within each worker | 2 |
+| `WORKER_QUEUED_MESSAGE_LOCK_TIMEOUT` | Integer | The number of seconds a queued message may stay locked without progress before the lock is assumed abandoned (worker died or hung) and released. Must exceed smtp_client.start_timeout plus smtp_client.transaction_timeout. | 900 |
 | `MAIN_DB_HOST` | String | Hostname for the main MariaDB server | localhost |
 | `MAIN_DB_PORT` | Integer | The MariaDB port to connect to | 3306 |
 | `MAIN_DB_USERNAME` | String | The MariaDB username | postal |
@@ -97,6 +99,9 @@ This document contains all the environment variables which are available for thi
 | `CLAMAV_PORT` | Integer | The port of the ClamAV server | 2000 |
 | `SMTP_CLIENT_OPEN_TIMEOUT` | Integer | The open timeout for outgoing SMTP connections | 30 |
 | `SMTP_CLIENT_READ_TIMEOUT` | Integer | The read timeout for outgoing SMTP connections | 30 |
+| `SMTP_CLIENT_CONNECTION_TIMEOUT` | Integer | The hard limit in seconds for establishing one outgoing SMTP session (connect, greeting, EHLO, STARTTLS and AUTH) | 60 |
+| `SMTP_CLIENT_START_TIMEOUT` | Integer | The hard limit in seconds for finding a usable outgoing SMTP server for a message, across all of its MX hosts | 180 |
+| `SMTP_CLIENT_TRANSACTION_TIMEOUT` | Integer | The hard limit in seconds for one outgoing SMTP transaction (MAIL FROM, RCPT TO and DATA). RFC 5321 recommends allowing at least 10 minutes for DATA | 600 |
 | `MIGRATION_WAITER_ENABLED` | Boolean | Wait for all migrations to run before starting a process | false |
 | `MIGRATION_WAITER_ATTEMPTS` | Integer | The number of attempts to try waiting for migrations to complete before start | 120 |
 | `MIGRATION_WAITER_SLEEP_TIME` | Integer | The number of seconds to wait between each migration check | 2 |
