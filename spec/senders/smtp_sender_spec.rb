@@ -29,6 +29,7 @@ RSpec.describe SMTPSender do
         smtp_send_message_result
       end
       allow(endpoint).to receive(:finish_smtp_session)
+      allow(endpoint).to receive(:abort_smtp_session)
       allow(endpoint).to receive(:reset_smtp_session)
       allow(endpoint).to receive(:smtp_client) do
         Net::SMTP.new(endpoint.ip_address, endpoint.server.port)
@@ -123,6 +124,42 @@ RSpec.describe SMTPSender do
           ip_address: "1.2.3.4",
           server: server
         )
+      end
+    end
+
+    context "when the time allowed to find a server has already elapsed" do
+      before do
+        allow(Postal::Config.smtp_client).to receive(:start_timeout).and_return(0)
+        allow(DNSResolver.local).to receive(:mx).and_return([[5, "mx1.example.com"]])
+        allow(DNSResolver.local).to receive(:a).with("mx1.example.com").and_return(["1.2.3.4"])
+      end
+
+      it "gives up without trying any endpoint and reports the timeout" do
+        expect(sender.start).to be false
+        expect(sender.endpoints).to be_empty
+        expect(sender.send_message(nil).output).to match(/Timed out after 0s looking for a usable SMTP server for example.com/)
+      end
+    end
+
+    context "when connecting to an endpoint exceeds the connection timeout" do
+      let(:smtp_start_error) do
+        proc do
+          sleep 1
+          nil
+        end
+      end
+
+      before do
+        allow(Postal::Config.smtp_client).to receive(:connection_timeout).and_return(0.2)
+        allow(DNSResolver.local).to receive(:mx).and_return([[5, "mx1.example.com"]])
+        allow(DNSResolver.local).to receive(:a).with("mx1.example.com").and_return(["1.2.3.4"])
+      end
+
+      it "aborts that session and reports the timeout" do
+        expect(sender.start).to be false
+        expect(sender.endpoints.last).to have_received(:abort_smtp_session)
+        expect(sender.endpoints.last).not_to have_received(:finish_smtp_session)
+        expect(sender.send_message(nil).output).to match(/timed out/)
       end
     end
 
@@ -406,21 +443,58 @@ RSpec.describe SMTPSender do
         end
       end
 
-      context "when there is a timeout" do
+      context "when there is a read timeout" do
         let(:smtp_send_message_error) { proc { Net::ReadTimeout.new } }
 
-        it "returns a SoftFail" do
+        it "returns a SoftFail that will be retried" do
           result = sender.send_message(message)
           expect(result).to be_a SendResult
           expect(result).to have_attributes(
             type: "SoftFail",
-            details: /Temporary SMTP delivery error when sending/
+            retry: true,
+            details: /Temporary SMTP delivery timeout when sending/
           )
         end
 
-        it "resets the endpoint SMTP sesssion" do
+        it "aborts the endpoint SMTP session rather than resetting it" do
           sender.send_message(message)
-          expect(sender.endpoints.last).to have_received(:reset_smtp_session)
+          expect(sender.endpoints.last).to have_received(:abort_smtp_session)
+          expect(sender.endpoints.last).not_to have_received(:reset_smtp_session)
+        end
+      end
+
+      context "when there is a write timeout" do
+        let(:smtp_send_message_error) { proc { Net::WriteTimeout.new } }
+
+        it "returns a SoftFail and aborts the session" do
+          result = sender.send_message(message)
+          expect(result).to have_attributes(type: "SoftFail", details: /Temporary SMTP delivery timeout when sending/)
+          expect(sender.endpoints.last).to have_received(:abort_smtp_session)
+        end
+      end
+
+      context "when the transaction exceeds the hard timeout" do
+        let(:smtp_send_message_error) do
+          proc do
+            sleep 1
+            nil
+          end
+        end
+
+        before do
+          allow(Postal::Config.smtp_client).to receive(:transaction_timeout).and_return(0.2)
+        end
+
+        it "returns a SoftFail and aborts the session" do
+          result = sender.send_message(message)
+          expect(result).to have_attributes(
+            type: "SoftFail",
+            retry: true,
+            details: /Temporary SMTP delivery timeout when sending/,
+            output: /timed out/
+          )
+          expect(sender.endpoints.last).to have_received(:abort_smtp_session)
+          expect(sender.endpoints.last).not_to have_received(:reset_smtp_session)
         end
       end
 
@@ -560,8 +634,6 @@ RSpec.describe SMTPSender do
         have_attributes(hostname: "test2.example.com", port: 2525, ssl_mode: "TLS"),
       ]
     end
-  end
-end
 
     it "returns relays with credentials when they are configured" do
       open_relay = Hashie::Mash.new(host: "open.example.com", port: 25, ssl_mode: "Auto")
@@ -572,3 +644,5 @@ end
         have_attributes(hostname: "relay.example.com", credentials: have_attributes(username: "relay-user", password: "relay-pass", auth_type: :plain)),
       ]
     end
+  end
+end

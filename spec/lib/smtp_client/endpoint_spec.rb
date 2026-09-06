@@ -274,6 +274,30 @@ module SMTPClient
       end
     end
 
+    describe "#abort_smtp_session" do
+      it "closes the socket without talking to the server and clears the client" do
+        endpoint.start_smtp_session
+        socket = double("socket", close: nil)
+        client = endpoint.smtp_client
+        client.instance_variable_set(:@socket, socket)
+        endpoint.abort_smtp_session
+        expect(socket).to have_received(:close)
+        expect(client).not_to have_received(:finish)
+        expect(endpoint.smtp_client).to be_nil
+      end
+
+      it "swallows errors from closing the socket" do
+        endpoint.start_smtp_session
+        endpoint.smtp_client.instance_variable_set(:@socket, double("socket").tap { |s| allow(s).to receive(:close).and_raise(IOError) })
+        expect { endpoint.abort_smtp_session }.not_to raise_error
+        expect(endpoint.smtp_client).to be_nil
+      end
+
+      it "does nothing when there is no client" do
+        expect { endpoint.abort_smtp_session }.not_to raise_error
+      end
+    end
+
     describe ".default_helo_hostname" do
       context "when the configuration specifies a helo hostname" do
         before do

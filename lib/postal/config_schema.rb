@@ -531,6 +531,21 @@ module Postal
       boolean :enabled do
         description "Wait for all migrations to run before starting a process"
         default false
+
+      integer :connection_timeout do
+        description "The hard limit in seconds for establishing one outgoing SMTP session (connect, greeting, EHLO, STARTTLS and AUTH)"
+        default 60
+      end
+
+      integer :start_timeout do
+        description "The hard limit in seconds for finding a usable outgoing SMTP server for a message, across all of its MX hosts"
+        default 180
+      end
+
+      integer :transaction_timeout do
+        description "The hard limit in seconds for one outgoing SMTP transaction (MAIL FROM, RCPT TO and DATA). RFC 5321 recommends allowing at least 10 minutes for DATA"
+        default 600
+      end
       end
 
       integer :attempts do

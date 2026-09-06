@@ -138,6 +138,19 @@ module SMTPClient
       @smtp_client = nil
     end
 
+    # Drop the connection without sending RSET/QUIT. Used after a hard timeout,
+    # where any further SMTP command would block on the same stuck socket.
+    # Net::SMTP offers no public accessor for its socket.
+    #
+    # @return [void]
+    def abort_smtp_session
+      @smtp_client&.instance_variable_get(:@socket)&.close
+    rescue StandardError
+      nil
+    ensure
+      @smtp_client = nil
+    end
+
     class << self
 
       # Return the default HELO hostname to present to SMTP servers that
