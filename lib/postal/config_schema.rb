@@ -117,6 +117,11 @@ module Postal
         default 1
       end
 
+      integer :webhook_request_lock_stale_minutes do
+        description "The number of minutes after which a webhook request lock is considered stale. Stale locks are released so the request is retried."
+        default 60
+      end
+
       boolean :batch_queued_messages do
         description "When enabled queued messages will be de-queued in batches based on their destination"
         default true
