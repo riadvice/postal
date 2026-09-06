@@ -82,7 +82,12 @@ module SMTPClient
         @smtp_client.disable_tls
       end
 
-      @smtp_client.start(@source_ip_address ? @source_ip_address.hostname : self.class.default_helo_hostname)
+      helo_hostname = @source_ip_address ? @source_ip_address.hostname : self.class.default_helo_hostname
+      if (credentials = @server.credentials)
+        @smtp_client.start(helo_hostname, user: credentials.username, secret: credentials.password, authtype: credentials.auth_type)
+      else
+        @smtp_client.start(helo_hostname)
+      end
 
       @smtp_client
     end

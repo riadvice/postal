@@ -562,3 +562,13 @@ RSpec.describe SMTPSender do
     end
   end
 end
+
+    it "returns relays with credentials when they are configured" do
+      open_relay = Hashie::Mash.new(host: "open.example.com", port: 25, ssl_mode: "Auto")
+      authenticated_relay = Hashie::Mash.new(host: "relay.example.com", port: 587, ssl_mode: "TLS", username: "relay-user", password: "relay-pass", auth_type: "plain")
+      allow(Postal::Config.postal).to receive(:smtp_relays).and_return([open_relay, authenticated_relay])
+      expect(described_class.smtp_relays).to match [
+        have_attributes(hostname: "open.example.com", credentials: nil),
+        have_attributes(hostname: "relay.example.com", credentials: have_attributes(username: "relay-user", password: "relay-pass", auth_type: :plain)),
+      ]
+    end

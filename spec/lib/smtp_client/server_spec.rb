@@ -9,7 +9,23 @@ module SMTPClient
     let(:port) { 25 }
     let(:ssl_mode) { SSLModes::AUTO }
 
-    subject(:server) { described_class.new(hostname, port: port, ssl_mode: ssl_mode) }
+    let(:credentials) { nil }
+
+    subject(:server) { described_class.new(hostname, port: port, ssl_mode: ssl_mode, credentials: credentials) }
+
+    describe "#credentials" do
+      it "is nil by default" do
+        expect(server.credentials).to be_nil
+      end
+
+      context "when credentials are given" do
+        let(:credentials) { Credentials.new("relay-user", "relay-pass") }
+
+        it "returns them" do
+          expect(server.credentials).to be credentials
+        end
+      end
+    end
 
     describe "#endpoints" do
       context "when there are A and AAAA records" do
