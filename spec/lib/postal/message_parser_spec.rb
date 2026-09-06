@@ -73,3 +73,11 @@ describe Postal::MessageParser do
     expect(parser.tracked_links).to eq 0
   end
 end
+  it "should strip the +notrack marker when there is no track domain at all" do
+    message = create_plain_text_message(server, "Hello world! http+notrack://github.com/atech/postal", "test@example.com")
+    parser = Postal::MessageParser.new(message)
+    expect(parser.actioned?).to be true
+    expect(parser.new_body).to include("http://github.com/atech/postal")
+    expect(parser.new_body).not_to include("+notrack")
+  end
+
