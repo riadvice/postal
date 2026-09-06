@@ -36,7 +36,7 @@ class WebhookRequest < ApplicationRecord
 
   serialize :payload, type: Hash, coder: YAML
 
-  scope :with_stale_lock, -> { where(locked_at: ...Postal::Config.postal.webhook_request_lock_stale_minutes.minutes.ago) }
+  scope :with_stale_lock, -> { where.not(locked_by: nil).where(locked_at: ...Postal::Config.postal.webhook_request_lock_stale_minutes.minutes.ago) }
 
   class << self
 
