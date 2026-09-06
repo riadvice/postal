@@ -51,15 +51,24 @@ module Postal
         ]
       end
 
-      it "accepts an explicit auth type" do
-        expect(relays("smtp://relay-user:relay-pass@relay.example.com?auth_type=plain").first).to include("auth_type" => "plain")
+      it "accepts an explicit auth type in any case" do
+        expect(relays("smtp://relay-user:relay-pass@relay.example.com?auth_type=PLAIN").first).to include("auth_type" => "plain")
       end
 
-      it "percent-decodes credentials" do
-        expect(relays("smtp://relay%40user:pa%24%24%3Aword@relay.example.com").first).to include(
+      it "percent-decodes credentials and keeps a literal plus sign" do
+        expect(relays("smtp://relay%40user:pa%24%24%3Aw+ord@relay.example.com").first).to include(
           "username" => "relay@user",
-          "password" => "pa$$:word"
+          "password" => "pa$$:w+ord"
         )
+      end
+
+      it "upgrades Auto to STARTTLS when credentials are given" do
+        expect(relays("smtp://relay-user:relay-pass@relay.example.com").first).to include("ssl_mode" => "STARTTLS")
+      end
+
+      it "refuses to send credentials without encryption" do
+        expect { relays("smtp://relay-user:relay-pass@relay.example.com?ssl_mode=None") }
+          .to raise_error(ArgumentError, /has credentials but ssl_mode=None/)
       end
 
       it "rejects an unsupported auth type" do

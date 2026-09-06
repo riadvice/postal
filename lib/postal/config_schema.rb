@@ -75,7 +75,8 @@ module Postal
       string :smtp_relays do
         array
         description "An array of SMTP relays in the format of smtp://host:port?ssl_mode=Auto. Relays that require authentication use " \
-                    "smtp://username:password@host:port?auth_type=login (percent-encode the credentials; auth_type may be plain, login or cram_md5)"
+                    "smtp://username:password@host:port?auth_type=login (percent-encode the credentials; auth_type may be plain, login or cram_md5). " \
+                    "Credentials are only ever sent over TLS: ssl_mode defaults to STARTTLS for them and None is refused"
         transform do |value|
           uri = URI.parse(value)
           query = uri.query ? CGI.parse(uri.query) : {}
@@ -85,13 +86,17 @@ module Postal
             ssl_mode: query["ssl_mode"]&.first || "Auto"
           }
           if uri.user
-            auth_type = query["auth_type"]&.first || "login"
+            auth_type = (query["auth_type"]&.first || "login").downcase
             unless %w[plain login cram_md5].include?(auth_type)
               raise ArgumentError, "auth_type for SMTP relay #{uri.host} must be plain, login or cram_md5 (got #{auth_type.inspect})"
             end
 
-            relay[:username] = CGI.unescape(uri.user)
-            relay[:password] = CGI.unescape(uri.password.to_s)
+            # Never send credentials over an unencrypted connection
+            relay[:ssl_mode] = "STARTTLS" if relay[:ssl_mode] == "Auto"
+            raise ArgumentError, "SMTP relay #{uri.host} has credentials but ssl_mode=None" if relay[:ssl_mode] == "None"
+
+            relay[:username] = URI.decode_uri_component(uri.user)
+            relay[:password] = URI.decode_uri_component(uri.password.to_s)
             relay[:auth_type] = auth_type
           end
           relay
