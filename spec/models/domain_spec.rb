@@ -78,22 +78,18 @@ describe Domain do
     it { is_expected.to validate_inclusion_of(:verification_method).in_array(Domain::VERIFICATION_METHODS) }
 
     it "rejects a leading dot" do
-      pending "the name format only restricts the character set"
       expect(domain).not_to allow_value(".example.com").for(:name)
     end
 
     it "rejects a trailing dot" do
-      pending "the name format only restricts the character set"
       expect(domain).not_to allow_value("example.com.").for(:name)
     end
 
     it "rejects consecutive dots" do
-      pending "the name format only restricts the character set"
       expect(domain).not_to allow_value("example..com").for(:name)
     end
 
     it "rejects a label longer than 63 characters" do
-      pending "the name format only restricts the character set"
       expect(domain).not_to allow_value("#{'a' * 64}.com").for(:name)
     end
   end

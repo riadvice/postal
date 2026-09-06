@@ -35,7 +35,7 @@ class Route < ApplicationRecord
   belongs_to :endpoint, polymorphic: true, optional: true
   has_many :additional_route_endpoints, dependent: :destroy
 
-  validates :name, presence: true, format: /\A(([a-z0-9\-.]*)|(\*)|(__returnpath__))\z/
+  validates :name, presence: true, format: /\A(([a-z0-9-]+(\.[a-z0-9-]+)*)|(\*)|(__returnpath__))\z/
   validates :spam_mode, inclusion: { in: SPAM_MODES }
   validates :endpoint, presence: { if: proc { mode == "Endpoint" } }
   validates :domain_id, presence: { unless: :return_path? }

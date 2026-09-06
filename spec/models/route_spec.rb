@@ -44,12 +44,10 @@ RSpec.describe Route do
     it { is_expected.to_not allow_value("   ").for(:name) }
 
     it "rejects a leading dot" do
-      pending "the name format only restricts the character set"
       expect(route).not_to allow_value(".test").for(:name)
     end
 
     it "rejects consecutive dots" do
-      pending "the name format only restricts the character set"
       expect(route).not_to allow_value("a..b").for(:name)
     end
   end
