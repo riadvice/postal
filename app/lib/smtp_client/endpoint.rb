@@ -142,11 +142,14 @@ module SMTPClient
     #
     # @return [void]
     def abort_smtp_session
-      @smtp_client&.instance_variable_get(:@socket)&.close
-    rescue StandardError
-      nil
-    ensure
-      @smtp_client = nil
+      return if @smtp_client.nil?
+
+      begin
+        @smtp_client.instance_variable_get(:@socket)&.close
+      rescue StandardError
+        nil
+      end
+      finish_smtp_session
     end
 
     class << self

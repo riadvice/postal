@@ -275,14 +275,14 @@ module SMTPClient
     end
 
     describe "#abort_smtp_session" do
-      it "closes the socket without talking to the server and clears the client" do
+      it "closes the socket before finishing so nothing is sent to the server" do
         endpoint.start_smtp_session
         socket = double("socket", close: nil)
         client = endpoint.smtp_client
         client.instance_variable_set(:@socket, socket)
         endpoint.abort_smtp_session
-        expect(socket).to have_received(:close)
-        expect(client).not_to have_received(:finish)
+        expect(socket).to have_received(:close).ordered
+        expect(client).to have_received(:finish).ordered
         expect(endpoint.smtp_client).to be_nil
       end
 
