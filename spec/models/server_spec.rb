@@ -710,7 +710,6 @@ describe Server do
       end
 
       it "finds a server whose permalinks contain hyphens" do
-        pending "the lookup regex only allows word characters although permalinks may contain hyphens"
         organization = create(:organization, permalink: "my-org")
         server = create(:server, organization: organization, permalink: "my-server")
         expect(described_class["my-org/my-server"]).to eq server

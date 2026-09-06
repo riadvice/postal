@@ -326,7 +326,7 @@ class Server < ApplicationRecord
     end
 
     def [](id, extra = nil)
-      if id.is_a?(String) && id =~ /\A(\w+)\/(\w+)\z/
+      if id.is_a?(String) && id =~ /\A([\w-]+)\/([\w-]+)\z/
         joins(:organization).where(
           organizations: { permalink: ::Regexp.last_match(1) }, permalink: ::Regexp.last_match(2)
         ).first
