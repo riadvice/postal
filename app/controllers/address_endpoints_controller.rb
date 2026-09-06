@@ -34,7 +34,7 @@ class AddressEndpointsController < ApplicationController
   end
 
   def destroy
-    @address_endpoint.destroy
+    flash[:alert] = @address_endpoint.errors.full_messages.to_sentence unless @address_endpoint.destroy
     redirect_to_with_json [organization, @server, :address_endpoints]
   end
 

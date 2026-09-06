@@ -33,7 +33,7 @@ class SMTPEndpointsController < ApplicationController
   end
 
   def destroy
-    @smtp_endpoint.destroy
+    flash[:alert] = @smtp_endpoint.errors.full_messages.to_sentence unless @smtp_endpoint.destroy
     redirect_to_with_json [organization, @server, :smtp_endpoints]
   end
 

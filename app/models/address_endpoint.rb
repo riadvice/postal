@@ -30,6 +30,11 @@ class AddressEndpoint < ApplicationRecord
   end
 
   def update_routes
+    if routes.any?(&:return_path?)
+      errors.add(:base, "This endpoint is used by the return path route and cannot be deleted")
+      throw :abort
+    end
+
     routes.each { |r| r.update(endpoint: nil, mode: "Reject") }
   end
 
