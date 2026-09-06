@@ -15,10 +15,12 @@ module Postal
         return unless response["symbols"].is_a?(Hash)
 
         response["symbols"].each_value do |symbol|
-          next if symbol["description"].blank?
+          next unless symbol.is_a?(Hash) && symbol["description"].present?
 
-          inspection.spam_checks << SpamCheck.new(symbol["name"], symbol["score"], symbol["description"])
+          inspection.spam_checks << SpamCheck.new(symbol["name"], symbol["score"].to_f, symbol["description"])
         end
+      rescue JSON::ParserError
+        inspection.spam_checks << SpamCheck.new("ERROR", 0, "Error when scanning with rspamd (invalid response)")
       rescue Error => e
         inspection.spam_checks << SpamCheck.new("ERROR", 0, e.message)
       end
