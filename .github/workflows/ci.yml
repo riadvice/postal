@@ -53,9 +53,15 @@ jobs:
       - run: docker compose pull
         env:
           POSTAL_IMAGE: riadvice/postal:ci-${{ github.sha }}
-      - run: docker compose run postal sh -c 'bundle exec rspec'
+      - run: mkdir -p coverage && chmod 777 coverage
+      - run: docker compose run -e COVERAGE=true postal sh -c 'bundle exec rspec'
         env:
           POSTAL_IMAGE: riadvice/postal:ci-${{ github.sha }}
+      - uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/coverage.xml
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   release-branch:
     name: Release (branch)
