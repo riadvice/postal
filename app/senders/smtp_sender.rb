@@ -21,6 +21,8 @@ class SMTPSender < BaseSender
     @connection_errors = []
     # Stores all endpoints that we have attempted to deliver mail to
     @endpoints = []
+    # Endpoints that timed out mid-session and must not be tried again
+    @failed_endpoints = []
     # Generate a log ID which can be used if none has been provided to trace
     # this SMTP session.
     @log_id = log_id || SecureRandom.alphanumeric(8).upcase
@@ -32,6 +34,8 @@ class SMTPSender < BaseSender
 
     servers.each do |server|
       server.endpoints.each do |endpoint|
+        next if @failed_endpoints.include?(endpoint.description)
+
         if monotonic_now >= deadline
           record_connection_error("Timed out after #{Postal::Config.smtp_client.start_timeout}s looking for a usable SMTP server for #{@domain}")
           return false
@@ -45,6 +49,11 @@ class SMTPSender < BaseSender
   end
 
   def send_message(message)
+    if @current_endpoint.nil? && @reconnect
+      @reconnect = false
+      start
+    end
+
     # If we don't have a current endpoint than we should raise an error.
     if @current_endpoint.nil?
       return create_result("SoftFail") do |r|
@@ -103,10 +112,12 @@ class SMTPSender < BaseSender
       r.output = smtp_result.string
     end
   rescue SMTPClient::TimeoutError, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout => e
-    logger.error "#{e.class}: #{e.message}"
     timed_out_endpoint = @current_endpoint
     timed_out_endpoint.abort_smtp_session
+    record_connection_error("#{timed_out_endpoint} timed out (#{e.class}: #{e.message})")
+    @failed_endpoints << timed_out_endpoint.description
     @current_endpoint = nil
+    @reconnect = true
 
     create_result("SoftFail", start_time) do |r|
       r.details = "Temporary SMTP delivery timeout when sending to #{timed_out_endpoint}"

@@ -599,6 +599,33 @@ RSpec.describe SMTPSender do
     end
   end
 
+  describe "reconnecting after a timeout" do
+    let(:server) { create(:server) }
+    let(:domain) { create(:domain, server: server) }
+    let(:message) { MessageFactory.outgoing(server, domain: domain) }
+    let(:smtp_send_message_error) do
+      proc { |endpoint, _| Net::ReadTimeout.new if endpoint.ip_address == "1.2.3.4" }
+    end
+
+    before do
+      allow(DNSResolver.local).to receive(:mx).and_return([[5, "mx1.example.com"], [10, "mx2.example.com"]])
+      allow(DNSResolver.local).to receive(:a).with("mx1.example.com").and_return(["1.2.3.4"])
+      allow(DNSResolver.local).to receive(:a).with("mx2.example.com").and_return(["6.7.8.9"])
+      sender.start
+    end
+
+    it "moves on to the next endpoint for the following message" do
+      expect(sender.send_message(message).type).to eq "SoftFail"
+      expect(sender.send_message(message).type).to eq "Sent"
+      expect(sender.endpoints.map(&:ip_address)).to eq ["1.2.3.4", "6.7.8.9"]
+    end
+
+    it "does not go back to the endpoint that timed out" do
+      2.times { sender.send_message(message) }
+      expect(sender.endpoints.count { |e| e.ip_address == "1.2.3.4" }).to eq 1
+    end
+  end
+
   describe ".smtp_relays" do
     before do
       if described_class.instance_variable_defined?("@smtp_relays")
