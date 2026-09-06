@@ -78,7 +78,7 @@ class DKIMHeader
 
   def normalized_body
     @normalized_body ||= begin
-      content = @raw_body.dup
+      content = @raw_body.to_s.dup
 
       # From the DKIM RFC6376
       # https://datatracker.ietf.org/doc/html/rfc6376#section-3.4.4
@@ -95,8 +95,7 @@ class DKIMHeader
       # b. Ignore all empty lines at the end of the message body.
       content.gsub!(/[ \r\n]*\z/, "")
 
-      content += "\r\n"
-      content
+      content.empty? ? content : content + "\r\n"
     end
   end
 
