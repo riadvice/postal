@@ -124,7 +124,11 @@ class User < ApplicationRecord
       user.oidc_uid = uid
       user.oidc_issuer = config.issuer
       user.email_address = oidc_email_address if oidc_email_address.present?
-      user.first_name, user.last_name = oidc_name.split(/\s+/, 2) if oidc_name.present?
+      if oidc_name.present?
+        first_name, last_name = oidc_name.strip.split(/[[:space:]]+/, 2)
+        user.first_name = first_name
+        user.last_name = last_name if last_name.present?
+      end
       user.password = nil
       user.save!
 

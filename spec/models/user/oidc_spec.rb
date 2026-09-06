@@ -111,5 +111,97 @@ RSpec.describe User do
         end
       end
     end
+
+    describe "name splitting" do
+      before do
+        @existing_user = create(:user, oidc_uid: uid, oidc_issuer: issuer, first_name: "mary", last_name: "apples")
+      end
+
+      def names
+        result
+        @existing_user.reload
+        [@existing_user.first_name, @existing_user.last_name]
+      end
+
+      context "with a two word name" do
+        let(:oidc_name) { "John Smith" }
+
+        it "splits into first and last names" do
+          expect(names).to eq ["John", "Smith"]
+        end
+      end
+
+      context "with more than two words" do
+        let(:oidc_name) { "John Ronald Reuel Tolkien" }
+
+        it "puts everything after the first word into the last name" do
+          expect(names).to eq ["John", "Ronald Reuel Tolkien"]
+        end
+      end
+
+      context "with multiple spaces between words" do
+        let(:oidc_name) { "John \t  Smith" }
+
+        it "treats the run of whitespace as one separator" do
+          expect(names).to eq ["John", "Smith"]
+        end
+      end
+
+      context "with a hyphenated first name" do
+        let(:oidc_name) { "Mary-Jane Watson" }
+
+        it "keeps the hyphenated name together" do
+          expect(names).to eq ["Mary-Jane", "Watson"]
+        end
+      end
+
+      context "with a unicode name" do
+        let(:oidc_name) { "José García Márquez" }
+
+        it "splits correctly" do
+          expect(names).to eq ["José", "García Márquez"]
+        end
+      end
+
+      context "with a non-breaking space" do
+        let(:oidc_name) { "John\u00A0Smith" }
+
+        it "splits on it" do
+          expect(names).to eq ["John", "Smith"]
+        end
+      end
+
+      context "with an empty name" do
+        let(:oidc_name) { "" }
+
+        it "leaves the existing name alone" do
+          expect(names).to eq ["mary", "apples"]
+        end
+      end
+
+      context "with a nil name" do
+        let(:oidc_name) { nil }
+
+        it "leaves the existing name alone" do
+          expect(names).to eq ["mary", "apples"]
+        end
+      end
+
+      context "with a single word name" do
+        let(:oidc_name) { "Madonna" }
+
+        it "keeps the existing last name" do
+          expect(names).to eq ["Madonna", "apples"]
+        end
+      end
+
+      context "with leading whitespace" do
+        let(:oidc_name) { "  John Smith" }
+
+        it "still saves the user" do
+          expect(names).to eq ["John", "Smith"]
+        end
+      end
+    end
   end
 end
