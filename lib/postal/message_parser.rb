@@ -103,6 +103,10 @@ module Postal
           match = ::Regexp.last_match
           trailing = match[:url][/[^\w]+\z/].to_s
           url = match[:url].delete_suffix(trailing)
+          while trailing.start_with?(")") && url.count("(") > url.count(")")
+            url += ")"
+            trailing = trailing[1..]
+          end
           if track_domain?(match[:domain].sub(/\.+\z/, ""))
             @tracked_links += 1
             token = @message.create_link(url)

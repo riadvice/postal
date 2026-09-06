@@ -403,7 +403,6 @@ describe Postal::MessageParser do
       let(:text) { "http://en.wikipedia.org/wiki/Foo_(bar)" }
 
       it "stores the URL with its closing parenthesis" do
-        pending "message_parser.rb:106 trims every trailing non-word character, truncating balanced parentheses"
         expect(parser.tracked_links).to eq 1
         expect(links_for(message).first["url"]).to eq text
       end
