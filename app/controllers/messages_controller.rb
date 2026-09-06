@@ -226,10 +226,10 @@ class MessagesController < ApplicationController
 
   def get_time_from_string(string)
     begin
-      if string =~ /\A(\d{2,4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})\z/
-        time = Time.new(::Regexp.last_match(1).to_i, ::Regexp.last_match(2).to_i, ::Regexp.last_match(3).to_i, ::Regexp.last_match(4).to_i, ::Regexp.last_match(5).to_i)
-      elsif string =~ /\A(\d{2,4})-(\d{2})-(\d{2})\z/
-        time = Time.new(::Regexp.last_match(1).to_i, ::Regexp.last_match(2).to_i, ::Regexp.last_match(3).to_i, 0)
+      if string =~ /\A(\d{4}|\d{2})-(\d{2})-(\d{2})(?: (\d{2}):(\d{2}))?\z/
+        year = ::Regexp.last_match(1).to_i
+        year += 2000 if ::Regexp.last_match(1).length == 2
+        time = Time.new(year, ::Regexp.last_match(2).to_i, ::Regexp.last_match(3).to_i, ::Regexp.last_match(4).to_i, ::Regexp.last_match(5).to_i)
       else
         time = Chronic.parse(string, context: :past)
       end

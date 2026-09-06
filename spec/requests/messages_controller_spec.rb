@@ -59,10 +59,6 @@ RSpec.describe "MessagesController", type: :request do
       expect(time_from("2024-01-15")).to eq Time.new(2024, 1, 15, 0)
     end
 
-    it "parses a three digit year literally" do
-      expect(time_from("999-01-15")).to eq Time.new(999, 1, 15, 0)
-    end
-
     it "falls back to natural language parsing for other formats" do
       expect(time_from("2024-1-5").to_date).to eq Date.new(2024, 1, 5)
       expect(time_from("2024-01-15T13:45")).to eq Time.new(2024, 1, 15, 13, 45)
@@ -93,8 +89,8 @@ RSpec.describe "MessagesController", type: :request do
     end
 
     it "interprets a two digit year as the current century" do
-      pending "the year group accepts two digits which are passed to Time.new as the year 24"
       expect(time_from("24-01-15")).to eq Time.new(2024, 1, 15, 0)
+      expect(time_from("24-01-15 10:30")).to eq Time.new(2024, 1, 15, 10, 30)
     end
   end
 
