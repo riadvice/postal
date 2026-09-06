@@ -8,6 +8,7 @@ module Postal
         raw_message = inspection.message.raw_message
 
         data = nil
+        tcp_socket = nil
         Timeout.timeout(10) do
           tcp_socket = TCPSocket.new(@config.host, @config.port)
           tcp_socket.write("zINSTREAM\0")
@@ -18,17 +19,19 @@ module Postal
           data = tcp_socket.read
         end
 
-        if data && data =~ /\Astream:\s+(.*?)[\s\0]+?/
-          if ::Regexp.last_match(1).upcase == "OK"
-            inspection.threat = false
-            inspection.threat_message = "No threats found"
-          else
-            inspection.threat = true
-            inspection.threat_message = ::Regexp.last_match(1)
-          end
-        else
+        result = data && data[/\Astream:\s+(.*?)\s*\0?\z/m, 1]
+        if result.nil?
           inspection.threat = false
           inspection.threat_message = "Could not scan message"
+        elsif result.casecmp?("OK")
+          inspection.threat = false
+          inspection.threat_message = "No threats found"
+        elsif (threat = result[/\A(.+?)\s+FOUND\z/, 1])
+          inspection.threat = true
+          inspection.threat_message = threat
+        else
+          inspection.threat = false
+          inspection.threat_message = "Could not scan message (#{result})"
         end
       rescue Timeout::Error
         inspection.threat = false
@@ -40,7 +43,7 @@ module Postal
         inspection.threat_message = "Error when scanning for threats"
       ensure
         begin
-          tcp_socket.close
+          tcp_socket&.close
         rescue StandardError
           nil
         end
