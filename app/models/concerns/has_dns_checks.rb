@@ -44,12 +44,12 @@ module HasDNSChecks
 
   def check_spf_record
     result = resolver.txt(name)
-    spf_records = result.grep(/\Av=spf1/)
+    spf_records = result.grep(/\Av=spf1(\s|\z)/i)
     if spf_records.empty?
       self.spf_status = "Missing"
       self.spf_error = "No SPF record exists for this domain"
     else
-      suitable_spf_records = spf_records.grep(/include:\s*#{Regexp.escape(Postal::Config.dns.spf_include)}/)
+      suitable_spf_records = spf_records.grep(/include:\s*#{Regexp.escape(Postal::Config.dns.spf_include)}(\s|\z)/i)
       if suitable_spf_records.empty?
         self.spf_status = "Invalid"
         self.spf_error = "An SPF record exists but it doesn't include #{Postal::Config.dns.spf_include}"
