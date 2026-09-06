@@ -37,6 +37,19 @@ RSpec.describe Postal::MessageDB::Message do
       end
 
       it "treats the whole body as a single attachment" do
+    context "when the message is a non-multipart HTML body that merely names itself" do
+      let(:message) do
+        MessageFactory.incoming(server) do |_msg, mail|
+          mail.content_type = 'text/html; name="newsletter.html"'
+          mail.body = "<p>hello</p>"
+        end
+      end
+
+      it "is not treated as an attachment" do
+        expect(message.attachments).to eq []
+      end
+    end
+
         expect(message.attachments.size).to eq 1
         attachment = message.attachments.first
         expect(attachment.filename).to eq "doc.pdf"

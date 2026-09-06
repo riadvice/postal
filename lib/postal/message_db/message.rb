@@ -323,7 +323,7 @@ module Postal
         return [] unless mail
 
         real_attachments = mail.attachments
-        return real_attachments unless real_attachments.empty? && mail.attachment?
+        return real_attachments unless real_attachments.empty? && mail.header[:content_disposition]&.disposition_type == "attachment"
 
         # Non-multipart message whose whole body is the attachment
         [mail]
