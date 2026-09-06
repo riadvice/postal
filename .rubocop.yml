@@ -1,3 +1,5 @@
+inherit_from: .rubocop_todo.yml
+
 AllCops:
   TargetRubyVersion: 3.0
   NewCops: enable
@@ -135,7 +137,7 @@ Style/FrozenStringLiteralComment:
   Enabled: true
   SafeAutoCorrect: true
 
-Naming/PredicateName:
+Naming/PredicatePrefix:
   Enabled: false
 
 Layout/LineLength:
