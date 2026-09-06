@@ -19,6 +19,25 @@ Switching is just a matter of changing which image tag your deployment pulls.
 - **Note your current image tag** (e.g. `postalserver/postal:stable` or a
   pinned version) so you can roll back by simply pointing back at it.
 
+## Automated option
+
+[`scripts/switch-to-riadvice-image.sh`](../scripts/switch-to-riadvice-image.sh)
+does steps 2–4 below for you: it finds your `docker-compose.yml`'s image
+reference (or a `POSTAL_IMAGE` variable in a neighbouring `.env` file), shows
+you the exact one-line change, asks for confirmation, then pulls, runs
+`postal upgrade`, and restarts.
+
+```bash
+./scripts/switch-to-riadvice-image.sh stable /path/to/docker-compose.yml
+```
+
+It only ever changes that one image reference — nothing else in your compose
+file, config, or volumes. If it can't confidently find the image line, it
+makes no changes and points you back at the manual steps below. Run it from
+this repo (or copy it alongside your own `docker-compose.yml`).
+
+## Manual steps
+
 ## 1. Pull the new image
 
 ```bash
