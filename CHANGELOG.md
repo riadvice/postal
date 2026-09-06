@@ -2,6 +2,16 @@
 
 This file contains all the latest changes and updates to Postal.
 
+## [2.1.5](https://github.com/riadvice/postal/compare/2.1.4...2.1.5) (2026-09-06)
+
+
+### Bug Fixes
+
+* duplicate string before modifying it to prevent frozen string errors ([f0a8aca](https://github.com/riadvice/postal/commit/f0a8aca6e10064fb16daefff9e22dcc20a831868))
+* fixed typo (rfc number) ([2f62baa](https://github.com/riadvice/postal/commit/2f62baa238fc1102706ee4acf079b7a876b05283))
+* mail view encoding issue [#2462](https://github.com/riadvice/postal/issues/2462) ([1917249](https://github.com/riadvice/postal/commit/1917249f5f011eeef6c5d4e8b5c14549bf97267f))
+* match IPv4 mapped IPv6 addresses when searching for SMTP-IP credentials ([8b525d0](https://github.com/riadvice/postal/commit/8b525d0381a9e0113af808b9ec2eb47bf78ec60b))
+
 ## 2.1.4
 
 ### Bug Fixes
