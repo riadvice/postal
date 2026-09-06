@@ -41,5 +41,58 @@ RSpec.describe Route do
         expect(route.endpoint).to eq http_endpoint
       end
     end
+
+    context "when the endpoint is an SMTP endpoint" do
+      let(:smtp_endpoint) { create(:smtp_endpoint, server: server) }
+
+      it "resets a normal route to Reject mode" do
+        route = create(:route, server: server, domain: domain, mode: "Endpoint", endpoint: smtp_endpoint)
+        smtp_endpoint.destroy
+        expect(route.reload.mode).to eq "Reject"
+        expect(route.endpoint).to be_nil
+      end
+
+      it "refuses to be destroyed while a return path route points at it" do
+        route = build(:route, server: server, domain: nil, name: "__returnpath__", mode: "Endpoint", endpoint: smtp_endpoint)
+        route.save(validate: false)
+        expect(smtp_endpoint.destroy).to be false
+        expect(smtp_endpoint.reload).to be_persisted
+        expect(smtp_endpoint.errors[:base]).to include("This endpoint is used by the return path route and cannot be deleted")
+      end
+    end
+
+    context "when the endpoint is an address endpoint" do
+      let(:address_endpoint) { create(:address_endpoint, server: server) }
+
+      it "resets a normal route to Reject mode" do
+        route = create(:route, server: server, domain: domain, mode: "Endpoint", endpoint: address_endpoint)
+        address_endpoint.destroy
+        expect(route.reload.mode).to eq "Reject"
+        expect(route.endpoint).to be_nil
+      end
+
+      it "refuses to be destroyed while a return path route points at it" do
+        route = build(:route, server: server, domain: nil, name: "__returnpath__", mode: "Endpoint", endpoint: address_endpoint)
+        route.save(validate: false)
+        expect(address_endpoint.destroy).to be false
+        expect(address_endpoint.reload).to be_persisted
+        expect(address_endpoint.errors[:base]).to include("This endpoint is used by the return path route and cannot be deleted")
+      end
+    end
+  end
+
+  describe "return path validation" do
+    let(:server) { create(:server) }
+
+    it "requires the return path route to point at an HTTP endpoint" do
+      route = build(:route, server: server, domain: nil, name: "__returnpath__", mode: "Endpoint", endpoint: create(:smtp_endpoint, server: server))
+      expect(route).not_to be_valid
+      expect(route.errors[:base]).to include("Return path routes must point to an HTTP endpoint")
+    end
+
+    it "accepts a return path route pointing at an HTTP endpoint" do
+      route = build(:route, server: server, domain: nil, name: "__returnpath__", mode: "Endpoint", endpoint: create(:http_endpoint, server: server))
+      expect(route).to be_valid
+    end
   end
 end
