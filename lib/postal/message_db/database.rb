@@ -378,6 +378,8 @@ module Postal
         end.join(joiner)
       end
 
+      public
+
       # Escape a value for safe use as a MySQL identifier (e.g. a column or
       # table name). Identifiers are wrapped in backticks and any backtick
       # within the identifier is doubled so it cannot break out of the quoting

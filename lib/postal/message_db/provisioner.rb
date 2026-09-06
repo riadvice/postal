@@ -62,7 +62,7 @@ module Postal
       # Drop a table
       #
       def drop_table(table_name)
-        @database.query("DROP TABLE `#{@database.database_name}`.`#{table_name}`")
+        @database.query("DROP TABLE #{@database.escape_identifier(@database.database_name)}.#{@database.escape_identifier(table_name)}")
       end
 
       #
@@ -162,9 +162,9 @@ module Postal
       #
       def create_table_query(table_name, options)
         String.new.tap do |s|
-          s << "CREATE TABLE `#{@database.database_name}`.`#{table_name}` ("
+          s << "CREATE TABLE #{@database.escape_identifier(@database.database_name)}.#{@database.escape_identifier(table_name)} ("
           s << options[:columns].map do |column_name, column_options|
-            "`#{column_name}` #{column_options}"
+            "#{@database.escape_identifier(column_name)} #{column_options}"
           end.join(", ")
           if options[:indexes]
             s << ", "
