@@ -100,6 +100,28 @@ module Postal
         expect(relays("smtp://relay.example.com?ssl_mode=TLS&ssl_mode=None").first).to include("ssl_mode" => "TLS")
       end
 
+      it "parses an smtps relay as implicit TLS on port 465" do
+        expect(relays("smtps://relay.example.com")).to eq [
+          { "host" => "relay.example.com", "port" => 465, "ssl_mode" => "TLS" },
+        ]
+      end
+
+      it "keeps an explicit port and SSL mode on an smtps relay" do
+        expect(relays("smtps://relay.example.com:2465?ssl_mode=STARTTLS").first).to include("port" => 2465, "ssl_mode" => "STARTTLS")
+      end
+
+      it "sends credentials to an smtps relay over implicit TLS" do
+        expect(relays("smtps://u:p@relay.example.com").first).to include("ssl_mode" => "TLS", "username" => "u")
+      end
+
+      it "rejects a relay with no scheme" do
+        expect { relays("relay.example.com:587") }.to raise_error(ArgumentError, /must be a smtp:\/\/ or smtps:\/\/ URL/)
+      end
+
+      it "rejects a relay with an unsupported scheme" do
+        expect { relays("http://relay.example.com") }.to raise_error(ArgumentError, /must be a smtp:\/\/ or smtps:\/\/ URL/)
+      end
+
       it "parses several relays" do
         expect(relays("smtp://a.example.com", "smtp://b.example.com:587").map { |r| [r["host"], r["port"]] }).to eq [["a.example.com", 25], ["b.example.com", 587]]
       end
@@ -113,11 +135,11 @@ module Postal
       end
 
       it "rejects a URL with a non-numeric port" do
-        expect { relays("smtp://relay.example.com:smtp") }.to raise_error(URI::InvalidURIError)
+        expect { relays("smtp://relay.example.com:smtp") }.to raise_error(ArgumentError, /is not a valid URL/)
       end
 
       it "rejects a URL containing spaces" do
-        expect { relays("smtp://relay example.com") }.to raise_error(URI::InvalidURIError)
+        expect { relays("smtp://relay example.com") }.to raise_error(ArgumentError, /is not a valid URL/)
       end
 
       it "parses an IPv6 host" do

@@ -74,18 +74,27 @@ module Postal
 
       string :smtp_relays do
         array
-        description "An array of SMTP relays in the format of smtp://host:port?ssl_mode=Auto. Relays that require authentication use " \
+        description "An array of SMTP relays in the format of smtp://host:port?ssl_mode=Auto, or smtps://host:port for implicit TLS (port 465, ssl_mode TLS). " \
+                    "Relays that require authentication use " \
                     "smtp://username:password@host:port?auth_type=login (percent-encode the credentials; auth_type may be plain, login or cram_md5). " \
                     "Credentials are only ever sent over TLS: ssl_mode defaults to STARTTLS for them and None is refused"
         transform do |value|
-          uri = URI.parse(value)
-          raise ArgumentError, "SMTP relay #{value.inspect} must be a smtp://host:port URL" if uri.scheme != "smtp" || uri.host.nil?
+          begin
+            uri = URI.parse(value)
+          rescue URI::InvalidURIError
+            raise ArgumentError, "SMTP relay #{value.inspect} is not a valid URL"
+          end
 
+          unless %w[smtp smtps].include?(uri.scheme) && uri.host
+            raise ArgumentError, "SMTP relay #{value.inspect} must be a smtp:// or smtps:// URL"
+          end
+
+          implicit_tls = uri.scheme == "smtps"
           query = uri.query ? CGI.parse(uri.query) : {}
           relay = {
             host: uri.hostname,
-            port: uri.port || 25,
-            ssl_mode: query["ssl_mode"]&.first || "Auto"
+            port: uri.port || (implicit_tls ? 465 : 25),
+            ssl_mode: query["ssl_mode"]&.first || (implicit_tls ? "TLS" : "Auto")
           }
           if uri.user
             auth_type = (query["auth_type"]&.first || "login").downcase
