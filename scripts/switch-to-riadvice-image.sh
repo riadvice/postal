@@ -6,7 +6,7 @@
 # Can be run straight from a checkout or piped from GitHub:
 #
 #   curl -fsSL https://raw.githubusercontent.com/riadvice/postal/main/scripts/switch-to-riadvice-image.sh | sudo bash
-#   curl -fsSL https://raw.githubusercontent.com/riadvice/postal/main/scripts/switch-to-riadvice-image.sh | sudo bash -s -- --tag 3.4.0 --yes
+#   curl -fsSL https://raw.githubusercontent.com/riadvice/postal/main/scripts/switch-to-riadvice-image.sh | sudo bash -s -- --tag 3.3.7-riadvice --yes
 #
 set -euo pipefail
 
@@ -30,9 +30,11 @@ Options:
   -h, --help               Show this message
 
 Tags published for riadvice/postal are 'stable' (latest release), 'latest'
-(tracks main), 'branch-<name>' and each released '<x.y.z>'. Upstream's version
-numbers are NOT published here, so always pick from this list — the script
-checks the tag against Docker Hub before touching anything.
+(tracks main), 'branch-<name>' and each release. Releases are named after the
+upstream version they are based on with a -riadvice suffix, e.g. '3.3.7-riadvice'
+or '3.3.7-riadvice.2'. Upstream's own version numbers are NOT published here, so
+always pick from this list — the script checks the tag against Docker Hub before
+touching anything.
 USAGE
 }
 
@@ -236,7 +238,7 @@ for file in "${FILES_TO_EDIT[@]}"; do
   if grep -qE '^[[:space:]]*(image:|POSTAL_IMAGE=).*postalserver/postal' "$file"; then
     abort "postalserver/postal is still referenced in ${file} after editing. Restore ${file}.bak and switch manually."
   fi
-  if grep -E '^[[:space:]]*(image:|POSTAL_IMAGE=).*riadvice/postal' "$file" | grep -qv "$NEW_IMAGE"; then
+  if grep -E '^[[:space:]]*(image:|POSTAL_IMAGE=).*riadvice/postal' "$file" | grep -qvF "$NEW_IMAGE"; then
     abort "${file} still has a riadvice/postal reference on a tag other than ${TAG}. Restore ${file}.bak and switch manually."
   fi
 done

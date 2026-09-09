@@ -18,15 +18,21 @@ This is the part that catches people out, so it comes first.
 
 | Tag | What it is |
 | --- | --- |
-| `stable` | The most recent `x.y.z` release tag. Recommended. |
-| `<x.y.z>` | A specific release, e.g. `3.4.0`. |
+| `stable` | The most recent release tag. Recommended. |
+| `<upstream>-riadvice[.N]` | A specific release, e.g. `3.3.7-riadvice` or `3.3.7-riadvice.2`. |
 | `latest` | Whatever is on `main`. |
 | `branch-<name>` | The head of another branch. |
 
-**Upstream's version numbers are not republished here.** This fork's releases
-have their own numbering, so a version that exists on `postalserver/postal`
-(say `3.3.7`) will usually not exist on `riadvice/postal`, and pulling it
-fails with `manifest unknown`.
+**Upstream's version numbers are not republished here.** A release is named
+after the upstream version it is based on, plus a `-riadvice` suffix — so
+`3.3.7-riadvice` is this fork's first release on top of upstream's `3.3.7`, and
+`3.3.7-riadvice.2` is the second. The suffix is what keeps fork releases from
+colliding with upstream's own numbering. A bare upstream version such as `3.3.7`
+does **not** exist on `riadvice/postal`, and pulling it fails with
+`manifest unknown`.
+
+(The earlier `3.4.0` tag predates this scheme and is still published. It is also
+based on upstream `3.3.7`, despite the number.)
 
 That matters because the official host-side installer (`/opt/postal/install`,
 the thing that provides `postal start` / `postal upgrade` / `postal
@@ -78,7 +84,7 @@ curl -fsSL https://raw.githubusercontent.com/riadvice/postal/main/scripts/switch
 Pin a specific release, and skip the prompt (needed for unattended runs):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/riadvice/postal/main/scripts/switch-to-riadvice-image.sh | sudo bash -s -- --tag 3.4.0 --yes
+curl -fsSL https://raw.githubusercontent.com/riadvice/postal/main/scripts/switch-to-riadvice-image.sh | sudo bash -s -- --tag 3.3.7-riadvice --yes
 ```
 
 Useful options: `--tag`, `--compose-file`, `--yes`, `--dry-run`,
