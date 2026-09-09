@@ -92,6 +92,13 @@ describe Postal::MessageParser do
     expect(parser.new_body).not_to include("+notrack")
   end
 
+  it "should not parse the message when the track domain's DNS isn't OK and there is nothing to strip" do
+    message = create_plain_text_message(server, "Hello world! http://github.com/atech/postal", "test@example.com")
+    create(:track_domain, server: server, domain: message.domain, dns_status: "Missing")
+    expect(Mail).not_to receive(:new)
+    expect(described_class.new(message).actioned?).to be false
+  end
+
   it "should strip the +notrack marker even when the track domain's DNS isn't OK" do
     message = create_plain_text_message(server, "Hello world! http+notrack://github.com/atech/postal", "test@example.com")
     create(:track_domain, server: server, domain: message.domain, dns_status: "Missing")

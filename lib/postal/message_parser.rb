@@ -11,10 +11,10 @@ module Postal
       @tracked_links = 0
       @tracked_images = 0
       track_domain = @message.server.track_domains.where(domain: @message.domain).first
-      return unless track_domain || @message.raw_message.include?("+notrack://")
-
       # Tracking needs working DNS but +notrack must be stripped regardless
       @domain = track_domain if track_domain&.dns_status == "OK"
+      return unless @domain || @message.raw_message.include?("+notrack://")
+
       @parsed_output = generate.split("\r\n\r\n", 2)
     end
 
