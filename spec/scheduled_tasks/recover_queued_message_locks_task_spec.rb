@@ -15,9 +15,21 @@ RSpec.describe RecoverQueuedMessageLocksTask do
     it "releases locks older than the lock timeout and schedules a retry" do
       message = create(:queued_message, :locked, locked_at: 11.minutes.ago, locked_by: "dead-worker", attempts: 2)
       task.call
-      expect(message.reload).to have_attributes(locked_by: nil, locked_at: nil, attempts: 3)
-      expect(message.retry_after).to be > Time.current
+      expect(message.reload).to have_attributes(locked_by: nil, locked_at: nil)
+      expect(message.retry_after).to be_within(5.seconds).of(described_class::RETRY_DELAY.from_now)
       expect(logger).to have_logged(/recovered 1 abandoned queued message locks/)
+    end
+
+    it "does not consume a delivery attempt, because nothing was delivered" do
+      message = create(:queued_message, :locked, locked_at: 11.minutes.ago, locked_by: "dead-worker", attempts: 2)
+      task.call
+      expect(message.reload.attempts).to eq 2
+    end
+
+    it "does not back off exponentially when a message is recovered repeatedly" do
+      message = create(:queued_message, :locked, locked_at: 11.minutes.ago, locked_by: "dead-worker", attempts: 15)
+      task.call
+      expect(message.reload.retry_after).to be_within(5.seconds).of(described_class::RETRY_DELAY.from_now)
     end
 
     it "leaves locks that are still within the timeout alone" do
