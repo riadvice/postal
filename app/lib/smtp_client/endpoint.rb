@@ -69,7 +69,7 @@ module SMTPClient
         case @server.ssl_mode
         when SSLModes::AUTO
           @smtp_client.enable_starttls_auto(self.class.ssl_context_without_verify)
-        when SSLModes::STARTTLS
+        when SSLModes::STARTTLS, SSLModes::LEGACY_STARTTLS
           @smtp_client.enable_starttls(self.class.ssl_context_with_verify)
         when SSLModes::TLS
           @smtp_client.enable_tls(self.class.ssl_context_with_verify)

@@ -4,7 +4,9 @@ module SMTPClient
   module SSLModes
 
     AUTO = "Auto"
-    STARTTLS = "STARTLS"
+    STARTTLS = "STARTTLS"
+    # Configuration and endpoints written against the historic misspelling
+    LEGACY_STARTTLS = "STARTLS"
     TLS = "TLS"
     NONE = "None"
 

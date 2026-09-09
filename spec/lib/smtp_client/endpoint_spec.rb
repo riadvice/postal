@@ -105,8 +105,22 @@ module SMTPClient
           end
         end
 
-        context "when the SSL mode is STARTLS" do
+        context "when the SSL mode is STARTTLS" do
           let(:ssl_mode) { SSLModes::STARTTLS }
+
+          it "as starttls as always" do
+            client = endpoint.start_smtp_session
+            expect(client.starttls?).to eq :always
+          end
+
+          it "is the string used by SMTPEndpoint and the smtp_relays config" do
+            expect(ssl_mode).to eq "STARTTLS"
+            expect(SMTPEndpoint::SSL_MODES).to include ssl_mode
+          end
+        end
+
+        context "when the SSL mode is the legacy STARTLS spelling" do
+          let(:ssl_mode) { SSLModes::LEGACY_STARTTLS }
 
           it "as starttls as always" do
             client = endpoint.start_smtp_session
