@@ -24,6 +24,17 @@ module Postal
     # Rails 8 caps regexps at 1s, too short for DKIM/tracking scans on big messages
     Regexp.timeout = 60
 
+    # Webhook payloads and credential options are YAML columns, and only Symbol is
+    # permitted by default, which fails when a column is read rather than written
+    config.active_record.yaml_column_permitted_classes = [
+      Symbol,
+      Date,
+      Time,
+      BigDecimal,
+      ActiveSupport::TimeWithZone,
+      ActiveSupport::TimeZone,
+    ]
+
     # Disable most generators
     config.generators do |g|
       g.orm             :active_record
