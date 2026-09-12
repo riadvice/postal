@@ -1,26 +1,51 @@
-= form_tag request.fullpath, :method => :get, :remote => true, :class => 'messageSearch', :enforce_utf8 => false do
-  %p
-    = link_to "Need help with filtering?", '#', :class => 'messageSearch__help js-toggle-helpbox'
-    = text_field_tag 'query', @query, :class => 'messageSearch__input js-focus-on-f js-form-submit', :placeholder => "Filter messages...", :data => {:disable_with => 'Searching...'}
+.messageSearch{data: {"server-id" => @server.id, "initial-filters" => (@parsed_filters || {}).to_json, "filter-values-url" => filter_values_organization_server_messages_path(organization, @server, format: :json)}}
+  = form_tag request.fullpath, :method => :get, :remote => true, :class => 'messageSearch__form js-message-filter-form', :enforce_utf8 => false do
+    = hidden_field_tag 'query', @query, :class => 'js-message-filter-query js-form-submit'
+
+    .messageFilters.js-message-filters
+
+    %p.messageSearch__actions
+      %button.button.button--small.button--neutral.js-message-filter-add{type: 'button'} + Add filter
+      %span.messageSearch__actionsDivider |
+      %a.js-toggle-advanced{href: '#'} Advanced (raw query)
+      %span.messageSearch__actionsDivider |
+      %span.messageSearch__savedSearches
+        %select.js-saved-search-select
+          %option{value: ''} Saved searches...
+        %button.button.button--small.button--neutral.js-save-search{type: 'button'} Save this search
+      %span.messageSearch__actionsDivider |
+      = link_to "Need help with filtering?", '#', :class => 'messageSearch__help js-toggle-helpbox'
+
+    .messageSearch__advanced.is-hidden.js-advanced-box
+      = text_field_tag 'query_advanced', @query, :class => 'messageSearch__input js-focus-on-f js-advanced-input js-form-submit', :placeholder => "e.g. to: rachel@example.com status: held", :data => {:disable_with => 'Searching...'}
 
   .messageSearch__helpBox.is-hidden.js-helpbox
     .messageSearch__left
       %h3.messageSearch__helpBoxTitle
         Filtering your messages
       %p.messageSearch__helpBoxText
-        You can filter your messages on a number of attributes. At present, it is not possible to
-        search the content of your messages. To filter though, you can insert any of the strings
-        as shown opposite into the box above and press enter.
+        Use "Add filter" above to build a search visually, or switch to "Advanced (raw query)" to type
+        a query directly using the syntax on the right. At present, it is not possible to search the
+        content of your messages.
     .messageSearch__right
       %dl.messageSearch__definition
         %dt to: rachel@example.com
-        %dd Returns all mail addressed to the address provided.
+        %dd Returns all mail addressed to the address provided. Wrap in <code>*</code> for partial matches, e.g. <code>to: *@example.com</code> or <code>to: rachel*</code>.
       %dl.messageSearch__definition
         %dt from: tom@example.com
-        %dd Returns all mail sent from to the address provided.
+        %dd Returns all mail sent from the address provided. Supports the same <code>*</code> wildcard as <code>to:</code>.
+      %dl.messageSearch__definition
+        %dt subject: invoice
+        %dd Returns messages whose subject matches. Supports the same <code>*</code> wildcard as <code>to:</code>.
       %dl.messageSearch__definition
         %dt status: pending
-        %dd Returns all messages with the status provided. The suitable statuses are: <code>pending</code>, <code>sent</code>, <code>held</code>, <code>softfail</code>, <code>hardfail</code> and <code>bounced</code>.
+        %dd Returns all messages with the status provided. The suitable statuses are: <code>Pending</code>, <code>Sent</code>, <code>Held</code>, <code>SoftFail</code>, <code>HardFail</code>, <code>Bounced</code>, <code>Error</code> and <code>Processed</code>.
+      %dl.messageSearch__definition
+        %dt held: yes
+        %dd Returns messages that are currently held (or <code>held: no</code> for messages that aren't).
+      %dl.messageSearch__definition
+        %dt threat: yes
+        %dd Returns messages that were flagged as a threat (or <code>threat: no</code>).
       %dl.messageSearch__definition
         %dt before: yyyy-mm-dd hh:mm
         %dd Returns any message received before the given timestamp.

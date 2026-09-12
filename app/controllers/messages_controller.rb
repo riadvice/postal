@@ -84,6 +84,20 @@ class MessagesController < ApplicationController
     get_messages("held")
   end
 
+  def filter_values
+    case params[:field]
+    when "tag"
+      values = @server.message_db.select(:messages, fields: [:tag], group: :tag, order: :tag, limit: 20).filter_map { |r| r["tag"] }
+    when "status"
+      values = %w[Pending Sent Held SoftFail HardFail Bounced Error Processed]
+    when "spam", "held", "threat"
+      values = %w[Yes No]
+    else
+      values = []
+    end
+    render json: { values: values }
+  end
+
   def deliveries
     render json: { html: render_to_string(partial: "deliveries", locals: { message: @message }) }
   end
@@ -178,12 +192,19 @@ class MessagesController < ApplicationController
           flash.now[:alert] = "It doesn't appear you entered anything to filter on. Please double check your query."
         else
           @queried = true
+          @parsed_filters = qs.hash.slice(*(QueryString::RECOGNIZED_KEYS - %w[order]))
+
+          if qs.unrecognized_keys.any?
+            flash.now[:alert] = "Unrecognized filter#{'s' if qs.unrecognized_keys.size > 1}: #{qs.unrecognized_keys.join(', ')}. They have been ignored."
+          end
+
           if qs[:order] == "oldest-first"
             options[:direction] = "asc"
           end
 
-          options[:where][:rcpt_to] = qs[:to] if qs[:to]
-          options[:where][:mail_from] = qs[:from] if qs[:from]
+          options[:where][:rcpt_to] = text_match_value(qs[:to]) if qs[:to]
+          options[:where][:mail_from] = text_match_value(qs[:from]) if qs[:from]
+          options[:where][:subject] = text_match_value(qs[:subject]) if qs[:subject]
           options[:where][:status] = qs[:status] if qs[:status]
           options[:where][:token] = qs[:token] if qs[:token]
 
@@ -195,6 +216,8 @@ class MessagesController < ApplicationController
           options[:where][:tag] = qs[:tag] if qs[:tag]
           options[:where][:id] = qs[:id] if qs[:id]
           options[:where][:spam] = true if qs[:spam] == "yes" || qs[:spam] == "y"
+          options[:where][:held] = boolean_value?(qs[:held]) unless qs[:held].nil?
+          options[:where][:threat] = boolean_value?(qs[:threat]) unless qs[:threat].nil?
           if qs[:before] || qs[:after]
             options[:where][:timestamp] = {}
             if qs[:before]
@@ -220,6 +243,27 @@ class MessagesController < ApplicationController
     end
 
     @messages = @server.message_db.messages_with_pagination(params[:page], options)
+  end
+
+  # Text fields (to/from/subject) accept an optional wildcard convention so the
+  # filter builder can offer "contains"/"starts with" without a new DSL:
+  #   *foo*  => contains "foo"
+  #   foo*   => starts with "foo"
+  #   foo    => exact match (default, keeps using the existing indexes)
+  def text_match_value(value)
+    return value unless value.is_a?(String)
+
+    if value.start_with?("*") && value.end_with?("*") && value.length > 1
+      { contains: value[1..-2] }
+    elsif value.end_with?("*") && value.length > 1
+      { starts_with: value[0..-2] }
+    else
+      value
+    end
+  end
+
+  def boolean_value?(value)
+    %w[yes y true 1].include?(value.to_s.downcase)
   end
 
   class TimeUndetermined < Postal::Error; end

@@ -2,6 +2,8 @@
 
 class QueryString
 
+  RECOGNIZED_KEYS = %w[to from subject status tag spam held threat token msgid id before after order].freeze
+
   def initialize(string)
     @string = string.strip + " "
   end
@@ -11,6 +13,13 @@ class QueryString
   end
 
   delegate :empty?, to: :hash
+
+  # Returns any keys that were parsed from the query string but aren't
+  # understood by the search UI/controller, so callers can warn the user
+  # about a likely typo instead of silently ignoring it.
+  def unrecognized_keys
+    hash.keys - RECOGNIZED_KEYS
+  end
 
   def hash
     @hash ||= @string.scan(/([a-z]+):\s*(?:(\d{2,4}-\d{2}-\d{2}\s\d{2}:\d{2})|"(.*?)"|(.*?))(\s|\z)/).each_with_object({}) do |(key, date, string_with_spaces, value), hash|

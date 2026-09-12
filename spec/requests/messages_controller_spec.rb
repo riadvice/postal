@@ -94,6 +94,89 @@ RSpec.describe "MessagesController", type: :request do
     end
   end
 
+  describe "GET /org/:org/servers/:server/messages/incoming (filtering)" do
+    let!(:invoice_message) do
+      MessageFactory.incoming(server) do |msg, mail|
+        mail.subject = "Your invoice is ready"
+        msg.rcpt_to = "rachel@example.com"
+        msg.tag = "invoices"
+      end
+    end
+
+    let!(:other_message) do
+      MessageFactory.incoming(server) do |msg, mail|
+        mail.subject = "Welcome aboard"
+        msg.rcpt_to = "someone-else@example.com"
+      end
+    end
+
+    def region_html_for(query)
+      get incoming_organization_server_messages_path(organization, server, query: query), as: :json
+      JSON.parse(response.body)["region_html"]
+    end
+
+    it "filters by a subject 'contains' wildcard" do
+      html = region_html_for("subject: *invoice*")
+      expect(html).to include("Your invoice is ready")
+      expect(html).not_to include("Welcome aboard")
+    end
+
+    it "filters by a to 'starts_with' wildcard" do
+      html = region_html_for("to: rachel*")
+      expect(html).to include("rachel@example.com")
+      expect(html).not_to include("someone-else@example.com")
+    end
+
+    it "still supports an exact (non-wildcard) match" do
+      html = region_html_for("to: rachel@example.com")
+      expect(html).to include("rachel@example.com")
+      expect(html).not_to include("someone-else@example.com")
+    end
+
+    it "filters by tag" do
+      html = region_html_for("tag: invoices")
+      expect(html).to include("Your invoice is ready")
+      expect(html).not_to include("Welcome aboard")
+    end
+
+    it "warns about an unrecognized filter key instead of silently ignoring it" do
+      get incoming_organization_server_messages_path(organization, server, query: "subjectt: invoice"), as: :json
+      expect(JSON.parse(response.body)["flash"]["alert"]).to match(/Unrecognized filter.*subjectt/)
+    end
+
+    it "does not warn when every key is recognized" do
+      get incoming_organization_server_messages_path(organization, server, query: "subject: invoice"), as: :json
+      expect(JSON.parse(response.body)["flash"]).not_to have_key("alert")
+    end
+  end
+
+  describe "GET /org/:org/servers/:server/messages/filter_values" do
+    it "returns the known status values" do
+      get filter_values_organization_server_messages_path(organization, server, field: "status")
+      json = JSON.parse(response.body)
+      expect(json["values"]).to include("Held", "Bounced")
+    end
+
+    it "returns yes/no for boolean fields" do
+      get filter_values_organization_server_messages_path(organization, server, field: "held")
+      json = JSON.parse(response.body)
+      expect(json["values"]).to eq(%w[Yes No])
+    end
+
+    it "returns distinct tags used on the server" do
+      MessageFactory.incoming(server) { |msg, _mail| msg.tag = "password-reset" }
+      get filter_values_organization_server_messages_path(organization, server, field: "tag")
+      json = JSON.parse(response.body)
+      expect(json["values"]).to include("password-reset")
+    end
+
+    it "returns an empty array for an unknown field" do
+      get filter_values_organization_server_messages_path(organization, server, field: "bogus")
+      json = JSON.parse(response.body)
+      expect(json["values"]).to eq([])
+    end
+  end
+
   describe "messages/html view template" do
     # We assert against the template source rather than rendering it in a
     # request spec because the full application layout depends on the asset

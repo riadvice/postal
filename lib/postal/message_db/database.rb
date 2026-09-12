@@ -145,6 +145,7 @@ module Postal
       #   :page      => Which page number to return
       #   :per_page  => The number of items per page (defaults to 30)
       #   :count     => Return a count of the results instead of the actual data
+      #   :group     => The name of a field to group by (e.g. for distinct value lists)
       #
       def select(table, options = {})
         sql_query = String.new("SELECT")
@@ -158,6 +159,9 @@ module Postal
         sql_query << " FROM #{escape_identifier(database_name)}.#{escape_identifier(table)}"
         if options[:where].present?
           sql_query << (" " + build_where_string(options[:where], " AND "))
+        end
+        if options[:group]
+          sql_query << " GROUP BY #{escape_identifier(options[:group])}"
         end
         if options[:order]
           direction = (options[:direction] || "ASC").upcase
@@ -369,6 +373,10 @@ module Postal
                 sql << "#{column} <= #{escape(inner_value)}"
               when :greater_than_or_equal_to
                 sql << "#{column} >= #{escape(inner_value)}"
+              when :contains
+                sql << "#{column} LIKE #{escape("%#{escape_like_wildcards(inner_value)}%")}"
+              when :starts_with
+                sql << "#{column} LIKE #{escape("#{escape_like_wildcards(inner_value)}%")}"
               end
             end
             sql.empty? ? "1=1" : sql.join(joiner)
@@ -386,6 +394,13 @@ module Postal
       # and inject arbitrary SQL.
       def escape_identifier(identifier)
         "`" + identifier.to_s.gsub("`", "``") + "`"
+      end
+
+      # Escape literal % and _ characters in a value that is going to be used
+      # inside a LIKE pattern, so user-supplied text can't inject its own
+      # wildcards.
+      def escape_like_wildcards(value)
+        value.to_s.gsub(/[%_\\]/) { |char| "\\#{char}" }
       end
 
     end

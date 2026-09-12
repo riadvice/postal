@@ -166,6 +166,45 @@ describe Postal::MessageDB::Database do
       it "compares nil and booleans" do
         expect(database.send(:hash_to_sql, { "a" => nil, "b" => true, "c" => false })).to eq "`a` = NULL, `b` = 1, `c` = 0"
       end
+
+      it "builds a LIKE condition for a contains operator" do
+        expect(database.send(:hash_to_sql, { "subject" => { contains: "invoice" } }))
+          .to eq "`subject` LIKE '%invoice%'"
+      end
+
+      it "builds a LIKE condition for a starts_with operator" do
+        expect(database.send(:hash_to_sql, { "rcpt_to" => { starts_with: "rachel" } }))
+          .to eq "`rcpt_to` LIKE 'rachel%'"
+      end
+
+      it "escapes literal % and _ wildcards in a contains value" do
+        expect(database.send(:hash_to_sql, { "subject" => { contains: "50%_off" } }))
+          .to eq "`subject` LIKE '%50\\\\%\\\\_off%'"
+      end
+
+      it "escapes a literal backslash in a contains value" do
+        expect(database.send(:hash_to_sql, { "subject" => { contains: 'a\\b' } }))
+          .to eq "`subject` LIKE '%a\\\\\\\\b%'"
+      end
+
+      it "combines contains with other operators using the joiner" do
+        sql = database.send(:hash_to_sql, { "subject" => { contains: "x", greater_than: 1 } }, " AND ")
+        expect(sql).to eq "`subject` LIKE '%x%' AND `subject` > '1'"
+      end
+    end
+
+    describe "#escape_like_wildcards" do
+      it "escapes percent and underscore" do
+        expect(database.send(:escape_like_wildcards, "50%_off")).to eq "50\\%\\_off"
+      end
+
+      it "escapes backslashes" do
+        expect(database.send(:escape_like_wildcards, 'a\\b')).to eq 'a\\\\b'
+      end
+
+      it "leaves ordinary text untouched" do
+        expect(database.send(:escape_like_wildcards, "hello")).to eq "hello"
+      end
     end
 
     describe "hostile identifiers against the live database" do

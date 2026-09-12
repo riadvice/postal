@@ -41,4 +41,21 @@ describe QueryString do
     qs = described_class.new("to: testaz@example.com")
     expect(qs.hash["to"]).to eq "testaz@example.com"
   end
+
+  describe "#unrecognized_keys" do
+    it "is empty when every key is recognized" do
+      qs = described_class.new("to: test@example.com status: held")
+      expect(qs.unrecognized_keys).to eq []
+    end
+
+    it "lists keys that aren't recognized" do
+      qs = described_class.new("to: test@example.com fromm: test@example.com")
+      expect(qs.unrecognized_keys).to eq ["fromm"]
+    end
+
+    it "lists each unrecognized key only once" do
+      qs = described_class.new("bogus: 1 bogus: 2")
+      expect(qs.unrecognized_keys).to eq ["bogus"]
+    end
+  end
 end
