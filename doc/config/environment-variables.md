@@ -45,6 +45,7 @@ This document contains all the environment variables which are available for thi
 | `LOGGING_RAILS_LOG_ENABLED` | Boolean | Enable the default Rails logger | false |
 | `LOGGING_SENTRY_DSN` | String | Deprecated, use sentry.dsn instead. Only used when sentry.dsn is not set |  |
 | `LOGGING_ENABLED` | Boolean | Enable the Postal logger to log to STDOUT | true |
+| `LOGGING_LEVEL` | String | The minimum log level for the Postal logger (debug, info, warn, error, fatal) | INFO |
 | `LOGGING_HIGHLIGHTING_ENABLED` | Boolean | Enable highlighting of log lines | false |
 | `SENTRY_DSN` | String | A Sentry DSN to report errors, error logs and request timings to. Nothing is sent when empty |  |
 | `SENTRY_TRACES_SAMPLE_RATE` | Float | The share of web requests, jobs and tasks to time (0.0 to 1.0) | 0.01 |
