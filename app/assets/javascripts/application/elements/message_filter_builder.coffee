@@ -133,11 +133,27 @@ syncQuery = ($root) ->
     token = tokenFor(field, operator, value)
     tokens.push(token) if token
   $('.js-message-filter-query', $root).val(tokens.join(' '))
+  updateFilterCount($root)
 
 syncQueryFromAdvanced = ($root) ->
   return unless $root.hasClass('is-advanced')
 
   $('.js-message-filter-query', $root).val($('.js-advanced-input', $root).val())
+  updateFilterCount($root)
+
+# --- active filter count badge ---
+
+updateFilterCount = ($root) ->
+  $badge = $('.js-filter-count', $root)
+  return unless $badge.length
+
+  query = $('.js-message-filter-query', $root).val() or ''
+  count = (query.match(/[a-z]+:\s*\S/gi) or []).length
+
+  if count > 0
+    $badge.text("#{count} filter#{if count is 1 then '' else 's'} active").removeClass('is-hidden')
+  else
+    $badge.addClass('is-hidden').empty()
 
 # --- autocomplete ---
 
@@ -209,6 +225,7 @@ buildInitialRows = ($root) ->
       any = true
 
   addRow($root, 'to', 'equals', '') unless any
+  updateFilterCount($root)
 
 # --- saved searches (localStorage only, per server) ---
 
@@ -259,6 +276,16 @@ $ ->
       event.preventDefault()
       $root = getRoot($(this))
       addRow($root, 'to', 'equals', '')
+    )
+
+    .on('click', '.js-message-filter-clear', (event) ->
+      event.preventDefault()
+      $root = getRoot($(this))
+      $('.js-message-filter-query, .js-advanced-input', $root).val('')
+      getFilterList($root).empty()
+      addRow($root, 'to', 'equals', '')
+      updateFilterCount($root)
+      getForm($root).trigger('submit')
     )
 
     .on('click', '.js-filter-remove', (event) ->

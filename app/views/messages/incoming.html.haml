@@ -13,6 +13,7 @@
         they'll start appearing here as soon as you start receiving them.
       %p.noData__button
         = link_to "View spam messages", incoming_organization_server_messages_path(organization, @server, :query => "spam: yes"), :class => "button button--neutral"
+        = link_to "View threats", incoming_organization_server_messages_path(organization, @server, :query => "threat: yes"), :class => "button button--neutral"
 
 - else
   = render 'index'

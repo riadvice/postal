@@ -7,6 +7,9 @@
     %p.messageSearch__actions
       %button.button.button--small.button--neutral.js-message-filter-add{type: 'button'} + Add filter
       %span.messageSearch__actionsDivider |
+      %a.js-message-filter-clear{href: '#'} Clear filters
+      %span.messageSearch__filterCount.is-hidden.js-filter-count
+      %span.messageSearch__actionsDivider |
       %a.js-toggle-advanced{href: '#'} Advanced (raw query)
       %span.messageSearch__actionsDivider |
       %span.messageSearch__savedSearches
