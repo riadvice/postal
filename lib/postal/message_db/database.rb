@@ -350,40 +350,51 @@ module Postal
       end
 
       def build_where_string(attributes, joiner = ", ")
-        "WHERE #{hash_to_sql(attributes, joiner)}"
+        "WHERE #{hash_to_sql(attributes, joiner, where: true)}"
       end
 
-      def hash_to_sql(hash, joiner = ", ")
+      # Used for both SET lists and WHERE clauses. Only a WHERE clause may
+      # compare with IS NULL; a SET list must assign NULL.
+      def hash_to_sql(hash, joiner = ", ", where: false)
         hash.map do |key, value|
-          column = escape_identifier(key)
-          if value.is_a?(Array) && value.all? { |v| v.is_a?(Integer) }
-            "#{column} IN (#{value.join(', ')})"
-          elsif value.is_a?(Array)
-            escaped_values = value.map { |v| escape(v) }.join(", ")
-            "#{column} IN (#{escaped_values})"
-          elsif value.is_a?(Hash)
-            sql = []
-            value.each do |operator, inner_value|
-              case operator
-              when :less_than
-                sql << "#{column} < #{escape(inner_value)}"
-              when :greater_than
-                sql << "#{column} > #{escape(inner_value)}"
-              when :less_than_or_equal_to
-                sql << "#{column} <= #{escape(inner_value)}"
-              when :greater_than_or_equal_to
-                sql << "#{column} >= #{escape(inner_value)}"
-              when :contains
-                sql << "#{column} LIKE #{escape("%#{escape_like_wildcards(inner_value)}%")}"
-              when :starts_with
-                sql << "#{column} LIKE #{escape("#{escape_like_wildcards(inner_value)}%")}"
-              end
-            end
-            sql.empty? ? "1=1" : sql.join(joiner)
-          else
-            "#{column} = #{escape(value)}"
-          end
+          condition_to_sql(escape_identifier(key), value, joiner, where: where)
         end.join(joiner)
+      end
+
+      def condition_to_sql(column, value, joiner, where: false)
+        if value.is_a?(Array) && value.all? { |v| v.is_a?(Integer) }
+          "#{column} IN (#{value.join(', ')})"
+        elsif value.is_a?(Array) && value.none? { |v| v.is_a?(Hash) || v.nil? }
+          escaped_values = value.map { |v| escape(v) }.join(", ")
+          "#{column} IN (#{escaped_values})"
+        elsif value.is_a?(Array)
+          "(" + value.map { |v| condition_to_sql(column, v, joiner, where: where) }.join(" OR ") + ")"
+        elsif value.is_a?(Hash)
+          sql = []
+          value.each do |operator, inner_value|
+            case operator
+            when :less_than
+              sql << "#{column} < #{escape(inner_value)}"
+            when :greater_than
+              sql << "#{column} > #{escape(inner_value)}"
+            when :less_than_or_equal_to
+              sql << "#{column} <= #{escape(inner_value)}"
+            when :greater_than_or_equal_to
+              sql << "#{column} >= #{escape(inner_value)}"
+            when :contains
+              sql << "#{column} LIKE #{escape("%#{escape_like_wildcards(inner_value)}%")}"
+            when :starts_with
+              sql << "#{column} LIKE #{escape("#{escape_like_wildcards(inner_value)}%")}"
+            when :ends_with
+              sql << "#{column} LIKE #{escape("%#{escape_like_wildcards(inner_value)}")}"
+            end
+          end
+          sql.empty? ? "1=1" : sql.join(joiner)
+        elsif value.nil? && where
+          "#{column} IS NULL"
+        else
+          "#{column} = #{escape(value)}"
+        end
       end
 
       public

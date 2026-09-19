@@ -25,6 +25,17 @@ describe QueryString do
     expect(qs.hash["to"]).to eq nil
   end
 
+  it "returns nil for an empty value" do
+    qs = described_class.new("from: another@example.com to: ")
+    expect(qs.hash["to"]).to eq nil
+    expect(qs.hash["from"]).to eq "another@example.com"
+  end
+
+  it "returns nil for an empty quoted value" do
+    qs = described_class.new('subject: ""')
+    expect(qs.hash["subject"]).to eq nil
+  end
+
   it "handles dates with spaces" do
     qs = described_class.new("date: 2017-02-12 15:20")
     expect(qs.hash["date"]).to eq("2017-02-12 15:20")
@@ -40,6 +51,24 @@ describe QueryString do
   it "works with a z in the string" do
     qs = described_class.new("to: testaz@example.com")
     expect(qs.hash["to"]).to eq "testaz@example.com"
+  end
+
+  describe "#key?" do
+    it "is true for a key with a blank value" do
+      qs = described_class.new("tag: [blank]")
+      expect(qs.key?(:tag)).to be true
+      expect(qs[:tag]).to be_nil
+    end
+
+    it "is false for a key which was not given" do
+      expect(described_class.new("to: x").key?(:tag)).to be false
+    end
+  end
+
+  describe "STATUSES" do
+    it "lists every status a message can have" do
+      expect(described_class::STATUSES).to match_array %w[Pending Sent Held SoftFail HardFail Bounced Error Processed]
+    end
   end
 
   describe "#unrecognized_keys" do

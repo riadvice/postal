@@ -110,9 +110,53 @@ RSpec.describe "MessagesController", type: :request do
       end
     end
 
+    let!(:unrelated_message) do
+      MessageFactory.incoming(server) do |msg, mail|
+        mail.subject = "Unrelated"
+        msg.rcpt_to = "nobody@example.com"
+        msg.tag = "misc"
+      end
+    end
+
     def region_html_for(query)
       get incoming_organization_server_messages_path(organization, server, query: query), as: :json
       JSON.parse(response.body)["region_html"]
+    end
+
+    it "filters by a blank value" do
+      html = region_html_for("tag: [blank]")
+      expect(html).to include("Welcome aboard")
+      expect(html).not_to include("Your invoice is ready")
+      expect(html).not_to include("Unrelated")
+    end
+
+    it "treats an empty value as blank" do
+      html = region_html_for("tag: ")
+      expect(html).to include("Welcome aboard")
+      expect(html).not_to include("Your invoice is ready")
+    end
+
+    it "matches any of a repeated filter, including wildcards" do
+      html = region_html_for("to: rachel* to: someone-else@example.com")
+      expect(html).to include("rachel@example.com")
+      expect(html).to include("someone-else@example.com")
+      expect(html).not_to include("nobody@example.com")
+    end
+
+    it "shows newest messages first by default" do
+      html = region_html_for("to: *example.com*")
+      expect(html.index("Unrelated")).to be < html.index("Your invoice is ready")
+    end
+
+    it "shows oldest messages first when asked" do
+      html = region_html_for("to: *example.com* order: oldest-first")
+      expect(html.index("Your invoice is ready")).to be < html.index("Unrelated")
+    end
+
+    it "hands every recognized filter, including order, back to the filter builder" do
+      html = region_html_for("to: rachel* order: oldest-first")
+      initial = html[/data-initial-filters="([^"]*)"/, 1]
+      expect(JSON.parse(CGI.unescapeHTML(initial))).to eq("to" => "rachel*", "order" => "oldest-first")
     end
 
     it "filters by a subject 'contains' wildcard" do
@@ -125,6 +169,12 @@ RSpec.describe "MessagesController", type: :request do
       html = region_html_for("to: rachel*")
       expect(html).to include("rachel@example.com")
       expect(html).not_to include("someone-else@example.com")
+    end
+
+    it "filters by a to 'ends_with' wildcard" do
+      html = region_html_for("to: *-else@example.com")
+      expect(html).to include("Welcome aboard")
+      expect(html).not_to include("Your invoice is ready")
     end
 
     it "still supports an exact (non-wildcard) match" do
@@ -147,6 +197,26 @@ RSpec.describe "MessagesController", type: :request do
     it "does not warn when every key is recognized" do
       get incoming_organization_server_messages_path(organization, server, query: "subject: invoice"), as: :json
       expect(JSON.parse(response.body)["flash"]).not_to have_key("alert")
+    end
+  end
+
+  describe "filter help" do
+    let(:html) do
+      get incoming_organization_server_messages_path(organization, server, query: "to: x"), as: :json
+      JSON.parse(response.body)["region_html"]
+    end
+
+    it "documents every recognized filter key" do
+      QueryString::RECOGNIZED_KEYS.each do |key|
+        expect(html).to include("<dt>#{key}:")
+      end
+    end
+
+    it "lists every status and passes them to the filter builder" do
+      QueryString::STATUSES.each do |status|
+        expect(html).to include("<code>#{status}</code>")
+      end
+      expect(html).to include("data-status-values=")
     end
   end
 

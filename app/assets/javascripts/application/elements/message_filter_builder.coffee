@@ -5,28 +5,37 @@
 # so this file only has to do two things: turn the filter rows into that
 # string before submit, and turn the string (already parsed server-side into
 # `data-initial-filters`) back into rows when a page loads.
+#
+# Every key in QueryString::RECOGNIZED_KEYS has an entry here. Fixed value
+# lists (statuses) come from data attributes on the search box so the UI, the
+# help text and the controller share one source of truth.
 
 FIELDS =
-  to:      label: 'To',         kind: 'text',   ops: ['equals', 'contains', 'starts_with']
-  from:    label: 'From',       kind: 'text',   ops: ['equals', 'contains', 'starts_with']
-  subject: label: 'Subject',    kind: 'text',   ops: ['equals', 'contains', 'starts_with']
-  status:  label: 'Status',     kind: 'remote', ops: ['equals'], remoteField: 'status'
-  tag:     label: 'Tag',        kind: 'remote', ops: ['equals'], remoteField: 'tag'
-  spam:    label: 'Spam',       kind: 'boolean', ops: ['equals']
-  held:    label: 'Held',       kind: 'boolean', ops: ['equals']
-  threat:  label: 'Threat',     kind: 'boolean', ops: ['equals']
+  to:      label: 'To',         kind: 'text',     ops: ['equals', 'contains', 'starts_with', 'ends_with', 'blank']
+  from:    label: 'From',       kind: 'text',     ops: ['equals', 'contains', 'starts_with', 'ends_with', 'blank']
+  subject: label: 'Subject',    kind: 'text',     ops: ['equals', 'contains', 'starts_with', 'ends_with', 'blank']
+  status:  label: 'Status',     kind: 'select',   ops: ['equals'], optionsFrom: 'status-values'
+  tag:     label: 'Tag',        kind: 'remote',   ops: ['equals', 'blank'], remoteField: 'tag'
+  spam:    label: 'Spam',       kind: 'boolean',  ops: ['equals']
+  held:    label: 'Held',       kind: 'boolean',  ops: ['equals']
+  threat:  label: 'Threat',     kind: 'boolean',  ops: ['equals']
   before:  label: 'Before',     kind: 'datetime', ops: ['equals']
   after:   label: 'After',      kind: 'datetime', ops: ['equals']
-  id:      label: 'ID',         kind: 'text',   ops: ['equals']
-  msgid:   label: 'Message-ID', kind: 'text',   ops: ['equals']
-  token:   label: 'Token',      kind: 'text',   ops: ['equals']
+  id:      label: 'ID',         kind: 'text',     ops: ['equals']
+  msgid:   label: 'Message-ID', kind: 'text',     ops: ['equals']
+  token:   label: 'Token',      kind: 'text',     ops: ['equals']
+  order:   label: 'Order',      kind: 'select',   ops: ['equals'], options: ['newest-first', 'oldest-first'], optionLabels: { 'newest-first': 'Newest first', 'oldest-first': 'Oldest first' }
 
-FIELD_ORDER = ['to', 'from', 'subject', 'status', 'tag', 'spam', 'held', 'threat', 'before', 'after', 'id', 'msgid', 'token']
+FIELD_ORDER = ['to', 'from', 'subject', 'status', 'tag', 'spam', 'held', 'threat', 'before', 'after', 'id', 'msgid', 'token', 'order']
 
 OPERATOR_LABELS =
   equals: 'is'
   contains: 'contains'
   starts_with: 'starts with'
+  ends_with: 'ends with'
+  blank: 'is blank'
+
+BLANK_TOKEN = '[blank]'
 
 remoteValuesCache = {}
 
@@ -43,14 +52,28 @@ getForm = ($root) -> $('.js-message-filter-form', $root)
 
 getFilterList = ($root) -> $('.js-message-filters', $root)
 
+escapeHtml = (value) -> $('<div>').text(String(value ? '')).html()
+
+selectOptionsFor = ($root, field) ->
+  meta = FIELDS[field]
+  return meta.options if meta?.options
+  if meta?.optionsFrom
+    values = $root.data(meta.optionsFrom)
+    values = JSON.parse(values) if typeof values is 'string'
+    return values if $.isArray(values)
+  []
+
 # --- value <-> operator/display splitting (mirrors MessagesController#text_match_value) ---
 
 splitValue = (raw) ->
-  value = String(raw ? '')
+  return { operator: 'blank', value: '' } if raw is null or raw is undefined
+  value = String(raw)
   if value.length > 1 and value.charAt(0) is '*' and value.charAt(value.length - 1) is '*'
     operator: 'contains', value: value.slice(1, -1)
   else if value.length > 1 and value.charAt(value.length - 1) is '*'
     operator: 'starts_with', value: value.slice(0, -1)
+  else if value.length > 1 and value.charAt(0) is '*'
+    operator: 'ends_with', value: value.slice(1)
   else
     operator: 'equals', value: value
 
@@ -58,9 +81,11 @@ joinValue = (operator, value) ->
   switch operator
     when 'contains' then "*#{value}*"
     when 'starts_with' then "#{value}*"
+    when 'ends_with' then "*#{value}"
     else value
 
 tokenFor = (field, operator, rawValue) ->
+  return "#{field}: #{BLANK_TOKEN}" if operator is 'blank'
   value = String(rawValue ? '').trim()
   return null if value is ''
   value = joinValue(operator, value)
@@ -81,13 +106,14 @@ fieldOptionsHtml = (selected) ->
 
 operatorOptionsHtml = (field, selected) ->
   ops = FIELDS[field]?.ops ? ['equals']
+  selected = ops[0] unless selected in ops
   html = ''
   for op in ops
     sel = if op is selected then ' selected' else ''
     html += "<option value=\"#{op}\"#{sel}>#{OPERATOR_LABELS[op]}</option>"
   html
 
-buildValueControlHtml = (field, value) ->
+buildValueControlHtml = ($root, field, value) ->
   meta = FIELDS[field]
   if meta?.kind is 'boolean'
     selected = if String(value).toLowerCase() in ['yes', 'y', 'true', '1'] then 'yes' else 'no'
@@ -95,28 +121,44 @@ buildValueControlHtml = (field, value) ->
       <option value=\"yes\"#{if selected is 'yes' then ' selected' else ''}>Yes</option>
       <option value=\"no\"#{if selected is 'no' then ' selected' else ''}>No</option>
     </select>"
+  else if meta?.kind is 'select'
+    current = String(value ? '').toLowerCase()
+    html = "<select class=\"messageFilters__value js-filter-value\">"
+    for option in selectOptionsFor($root, field)
+      sel = if String(option).toLowerCase() is current then ' selected' else ''
+      label = meta.optionLabels?[option] ? option
+      html += "<option value=\"#{escapeHtml(option)}\"#{sel}>#{escapeHtml(label)}</option>"
+    html + "</select>"
   else if meta?.kind is 'datetime'
-    "<input type=\"text\" class=\"messageFilters__value js-filter-value\" placeholder=\"yyyy-mm-dd hh:mm\" value=\"#{$('<div>').text(value).html()}\" autocomplete=\"off\">"
+    "<input type=\"text\" class=\"messageFilters__value js-filter-value\" placeholder=\"yyyy-mm-dd hh:mm or e.g. yesterday\" value=\"#{escapeHtml(value)}\" autocomplete=\"off\">"
   else
     "<span class=\"messageFilters__valueWrap\">
-      <input type=\"text\" class=\"messageFilters__value js-filter-value\" value=\"#{$('<div>').text(value).html()}\" autocomplete=\"off\">
+      <input type=\"text\" class=\"messageFilters__value js-filter-value\" value=\"#{escapeHtml(value)}\" autocomplete=\"off\">
       <ul class=\"messageFilters__suggestions js-filter-suggestions is-hidden\"></ul>
     </span>"
 
-rowHtml = (field, operator, value) ->
-  field = field ? 'to'
+rowHtml = ($root, field, operator, value) ->
+  field = 'to' unless FIELDS[field]
   operator = operator ? 'equals'
   value = value ? ''
   "<div class=\"messageFilters__row js-filter-row\">
     <select class=\"messageFilters__field js-filter-field\">#{fieldOptionsHtml(field)}</select>
     <select class=\"messageFilters__operator js-filter-operator\">#{operatorOptionsHtml(field, operator)}</select>
-    #{buildValueControlHtml(field, value)}
+    #{buildValueControlHtml($root, field, value)}
     <button type=\"button\" class=\"messageFilters__remove js-filter-remove\" aria-label=\"Remove filter\">&times;</button>
   </div>"
 
+# "is blank" needs no value, so the value box is emptied and disabled.
+applyOperatorState = ($row) ->
+  blank = $('.js-filter-operator', $row).val() is 'blank'
+  $value = $('.js-filter-value', $row)
+  $value.val('') if blank
+  $value.prop('disabled', blank)
+
 addRow = ($root, field, operator, value) ->
-  $row = $(rowHtml(field, operator, value))
+  $row = $(rowHtml($root, field, operator, value))
   getFilterList($root).append($row)
+  applyOperatorState($row)
   $row
 
 # --- serialization: rows -> query string ---
@@ -148,7 +190,7 @@ updateFilterCount = ($root) ->
   return unless $badge.length
 
   query = $('.js-message-filter-query', $root).val() or ''
-  count = (query.match(/[a-z]+:\s*\S/gi) or []).length
+  count = (query.match(/\b(?!order\b)[a-z]+:\s*\S/gi) or []).length
 
   if count > 0
     $badge.text("#{count} filter#{if count is 1 then '' else 's'} active").removeClass('is-hidden')
@@ -192,6 +234,7 @@ hideSuggestions = ($input) ->
   $input.siblings('.js-filter-suggestions').addClass('is-hidden').empty()
 
 updateSuggestionsForInput = ($input) ->
+  return if $input.prop('disabled')
   $row = $input.closest('.js-filter-row')
   field = $('.js-filter-field', $row).val()
   meta = FIELDS[field]
@@ -304,11 +347,18 @@ $ ->
       field = $(this).val()
       $row.find('.js-filter-operator').replaceWith("<select class=\"messageFilters__operator js-filter-operator\">#{operatorOptionsHtml(field, 'equals')}</select>")
       $row.find('.messageFilters__value, .messageFilters__valueWrap').remove()
-      $row.find('.js-filter-operator').after(buildValueControlHtml(field, ''))
+      $row.find('.js-filter-operator').after(buildValueControlHtml($root, field, ''))
+      applyOperatorState($row)
       syncQuery($root)
     )
 
-    .on('change', '.js-filter-operator, .js-filter-value', (event) ->
+    .on('change', '.js-filter-operator', (event) ->
+      $row = $(this).closest('.js-filter-row')
+      applyOperatorState($row)
+      syncQuery(getRoot($(this)))
+    )
+
+    .on('change', '.js-filter-value', (event) ->
       syncQuery(getRoot($(this)))
     )
 

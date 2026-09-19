@@ -10,7 +10,7 @@
         %dt From
         %dd
           - if @message.mail_from
-            = link_to @message.mail_from || "[blank]", send("#{@message.scope}_organization_server_messages_path", organization, @server, :query => "from: #{@message.mail_from}"), :class => 'u-link'
+            = link_to @message.mail_from || "[blank]", send("#{@message.scope}_organization_server_messages_path", organization, @server, :query => "from: #{@message.mail_from.presence || '[blank]'}"), :class => 'u-link'
           - else
             None
 
@@ -18,9 +18,9 @@
         %dt To
         %dd
           - if @message.rcpt_to_return_path?
-            %span.returnPathTag.returnPathTag--inMessageHeader= link_to "Return Path", send("#{@message.scope}_organization_server_messages_path", organization, @server, :query => "to: #{@message.rcpt_to}"), :class => 'u-link'
+            %span.returnPathTag.returnPathTag--inMessageHeader= link_to "Return Path", send("#{@message.scope}_organization_server_messages_path", organization, @server, :query => "to: #{@message.rcpt_to.presence || '[blank]'}"), :class => 'u-link'
           - else
-            = link_to @message.rcpt_to || "[blank]", send("#{@message.scope}_organization_server_messages_path", organization, @server, :query => "to: #{@message.rcpt_to}"), :class => 'u-link'
+            = link_to @message.rcpt_to || "[blank]", send("#{@message.scope}_organization_server_messages_path", organization, @server, :query => "to: #{@message.rcpt_to.presence || '[blank]'}"), :class => 'u-link'
       %dl
         %dt Received
         %dd= @message.timestamp.in_time_zone.to_fs(:long)

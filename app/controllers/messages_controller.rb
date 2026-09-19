@@ -89,7 +89,7 @@ class MessagesController < ApplicationController
     when "tag"
       values = @server.message_db.select(:messages, fields: [:tag], group: :tag, order: :tag, limit: 20).filter_map { |r| r["tag"] }
     when "status"
-      values = %w[Pending Sent Held SoftFail HardFail Bounced Error Processed]
+      values = QueryString::STATUSES
     when "spam", "held", "threat"
       values = %w[Yes No]
     else
@@ -192,7 +192,7 @@ class MessagesController < ApplicationController
           flash.now[:alert] = "It doesn't appear you entered anything to filter on. Please double check your query."
         else
           @queried = true
-          @parsed_filters = qs.hash.slice(*(QueryString::RECOGNIZED_KEYS - %w[order]))
+          @parsed_filters = qs.hash.slice(*QueryString::RECOGNIZED_KEYS)
 
           if qs.unrecognized_keys.any?
             flash.now[:alert] = "Unrecognized filter#{'s' if qs.unrecognized_keys.size > 1}: #{qs.unrecognized_keys.join(', ')}. They have been ignored."
@@ -202,9 +202,9 @@ class MessagesController < ApplicationController
             options[:direction] = "asc"
           end
 
-          options[:where][:rcpt_to] = text_match_value(qs[:to]) if qs[:to]
-          options[:where][:mail_from] = text_match_value(qs[:from]) if qs[:from]
-          options[:where][:subject] = text_match_value(qs[:subject]) if qs[:subject]
+          options[:where][:rcpt_to] = text_match_value(qs[:to]) if qs.key?(:to)
+          options[:where][:mail_from] = text_match_value(qs[:from]) if qs.key?(:from)
+          options[:where][:subject] = text_match_value(qs[:subject]) if qs.key?(:subject)
           options[:where][:status] = qs[:status] if qs[:status]
           options[:where][:token] = qs[:token] if qs[:token]
 
@@ -213,7 +213,7 @@ class MessagesController < ApplicationController
             options[:where].delete(:spam)
             options[:where].delete(:scope)
           end
-          options[:where][:tag] = qs[:tag] if qs[:tag]
+          options[:where][:tag] = qs[:tag] if qs.key?(:tag)
           options[:where][:id] = qs[:id] if qs[:id]
           options[:where][:spam] = true if qs[:spam] == "yes" || qs[:spam] == "y"
           options[:where][:held] = boolean_value?(qs[:held]) unless qs[:held].nil?
@@ -249,14 +249,19 @@ class MessagesController < ApplicationController
   # filter builder can offer "contains"/"starts with" without a new DSL:
   #   *foo*  => contains "foo"
   #   foo*   => starts with "foo"
+  #   *foo   => ends with "foo"
   #   foo    => exact match (default, keeps using the existing indexes)
+  # A repeated filter arrives as an array and matches any of its values.
   def text_match_value(value)
+    return value.map { |v| text_match_value(v) } if value.is_a?(Array)
     return value unless value.is_a?(String)
 
     if value.start_with?("*") && value.end_with?("*") && value.length > 1
       { contains: value[1..-2] }
     elsif value.end_with?("*") && value.length > 1
       { starts_with: value[0..-2] }
+    elsif value.start_with?("*") && value.length > 1
+      { ends_with: value[1..] }
     else
       value
     end

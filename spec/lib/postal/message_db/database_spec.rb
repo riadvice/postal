@@ -163,8 +163,26 @@ describe Postal::MessageDB::Database do
         expect(database.send(:hash_to_sql, { "a" => 1, "b" => 2 }, " AND ")).to eq "`a` = '1' AND `b` = '2'"
       end
 
-      it "compares nil and booleans" do
+      it "assigns nil and booleans in a SET list" do
         expect(database.send(:hash_to_sql, { "a" => nil, "b" => true, "c" => false })).to eq "`a` = NULL, `b` = 1, `c` = 0"
+      end
+
+      it "compares nil with IS NULL in a WHERE clause" do
+        expect(database.send(:build_where_string, { "a" => nil, "b" => true }, " AND ")).to eq "WHERE `a` IS NULL AND `b` = 1"
+      end
+
+      it "builds an OR group for an array containing nil" do
+        expect(database.send(:build_where_string, { "tag" => ["invoices", nil] })).to eq "WHERE (`tag` = 'invoices' OR `tag` IS NULL)"
+      end
+
+      it "builds an OR group for an array containing operator hashes" do
+        sql = database.send(:hash_to_sql, { "rcpt_to" => [{ starts_with: "rachel" }, "bob@example.com"] })
+        expect(sql).to eq "(`rcpt_to` LIKE 'rachel%' OR `rcpt_to` = 'bob@example.com')"
+      end
+
+      it "keeps other conditions outside the OR group" do
+        sql = database.send(:build_where_string, { "rcpt_to" => [{ contains: "a" }, { contains: "b" }], "spam" => false }, " AND ")
+        expect(sql).to eq "WHERE (`rcpt_to` LIKE '%a%' OR `rcpt_to` LIKE '%b%') AND `spam` = 0"
       end
 
       it "builds a LIKE condition for a contains operator" do
@@ -175,6 +193,11 @@ describe Postal::MessageDB::Database do
       it "builds a LIKE condition for a starts_with operator" do
         expect(database.send(:hash_to_sql, { "rcpt_to" => { starts_with: "rachel" } }))
           .to eq "`rcpt_to` LIKE 'rachel%'"
+      end
+
+      it "builds a LIKE condition for an ends_with operator" do
+        expect(database.send(:hash_to_sql, { "rcpt_to" => { ends_with: "@example.com" } }))
+          .to eq "`rcpt_to` LIKE '%@example.com'"
       end
 
       it "escapes literal % and _ wildcards in a contains value" do

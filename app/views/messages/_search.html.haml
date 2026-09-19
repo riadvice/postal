@@ -1,6 +1,10 @@
-.messageSearch{data: {"server-id" => @server.id, "initial-filters" => (@parsed_filters || {}).to_json, "filter-values-url" => filter_values_organization_server_messages_path(organization, @server, format: :json)}}
+.messageSearch{data: {"server-id" => @server.id, "initial-filters" => (@parsed_filters || {}).to_json, "filter-values-url" => filter_values_organization_server_messages_path(organization, @server, format: :json), "status-values" => QueryString::STATUSES.to_json}}
   = form_tag request.fullpath, :method => :get, :remote => true, :class => 'messageSearch__form js-message-filter-form', :enforce_utf8 => false do
     = hidden_field_tag 'query', @query, :class => 'js-message-filter-query js-form-submit'
+
+    .messageSearch__header
+      %span.messageSearch__title Filter messages
+      = link_to "Need help with filtering?", '#', :class => 'messageSearch__help js-toggle-helpbox'
 
     .messageFilters.js-message-filters
 
@@ -16,8 +20,6 @@
         %select.js-saved-search-select
           %option{value: ''} Saved searches...
         %button.button.button--small.button--neutral.js-save-search{type: 'button'} Save this search
-      %span.messageSearch__actionsDivider |
-      = link_to "Need help with filtering?", '#', :class => 'messageSearch__help js-toggle-helpbox'
 
     .messageSearch__advanced.is-hidden.js-advanced-box
       = text_field_tag 'query_advanced', @query, :class => 'messageSearch__input js-focus-on-f js-advanced-input js-form-submit', :placeholder => "e.g. to: rachel@example.com status: held", :data => {:disable_with => 'Searching...'}
@@ -27,13 +29,20 @@
       %h3.messageSearch__helpBoxTitle
         Filtering your messages
       %p.messageSearch__helpBoxText
-        Use "Add filter" above to build a search visually, or switch to "Advanced (raw query)" to type
-        a query directly using the syntax on the right. At present, it is not possible to search the
-        content of your messages.
+        Use "Add filter" to build a search visually, or switch to "Advanced (raw query)" to type a
+        query using the filters listed on the right. Only these filters are understood; anything
+        else is reported and ignored.
+      %ul.messageSearch__helpBoxList
+        %li Every filter is written as <code>name: value</code>. Combine filters with spaces and all of them must match, e.g. <code>to: rachel@example.com status: held</code>.
+        %li Repeat a filter to match any one of several values, e.g. <code>tag: invoices tag: receipts</code>.
+        %li Wrap a value containing spaces in double quotes, e.g. <code>subject: "Your invoice"</code>.
+        %li Use <code>[blank]</code> to find messages where a field is empty, e.g. <code>from: [blank]</code> for bounces or <code>tag: [blank]</code>.
+        %li <code>to</code>, <code>from</code> and <code>subject</code> accept a <code>*</code> wildcard: <code>rachel*</code> starts with, <code>*@example.com</code> ends with, <code>*example*</code> contains. Every other filter needs the exact value.
+        %li Words without a filter name are ignored, and it is not possible to search the content of your messages.
     .messageSearch__right
       %dl.messageSearch__definition
         %dt to: rachel@example.com
-        %dd Returns all mail addressed to the address provided. Wrap in <code>*</code> for partial matches, e.g. <code>to: *@example.com</code> or <code>to: rachel*</code>.
+        %dd Returns all mail addressed to the address provided. Use <code>*</code> for partial matches, e.g. <code>to: *@example.com</code>, <code>to: rachel*</code> or <code>to: *rachel*</code>.
       %dl.messageSearch__definition
         %dt from: tom@example.com
         %dd Returns all mail sent from the address provided. Supports the same <code>*</code> wildcard as <code>to:</code>.
@@ -42,7 +51,16 @@
         %dd Returns messages whose subject matches. Supports the same <code>*</code> wildcard as <code>to:</code>.
       %dl.messageSearch__definition
         %dt status: pending
-        %dd Returns all messages with the status provided. The suitable statuses are: <code>Pending</code>, <code>Sent</code>, <code>Held</code>, <code>SoftFail</code>, <code>HardFail</code>, <code>Bounced</code>, <code>Error</code> and <code>Processed</code>.
+        %dd
+          Returns all messages with the status provided. The suitable statuses are:
+          = QueryString::STATUSES.map { |status| content_tag(:code, status) }.to_sentence.html_safe
+          (case does not matter).
+      %dl.messageSearch__definition
+        %dt tag: password-reset
+        %dd Returns any message tagged with the tag provided, or <code>tag: [blank]</code> for untagged messages.
+      %dl.messageSearch__definition
+        %dt spam: yes
+        %dd By default, spam is not shown in results. To show spam instead of non-spam, just add this to the query.
       %dl.messageSearch__definition
         %dt held: yes
         %dd Returns messages that are currently held (or <code>held: no</code> for messages that aren't).
@@ -51,19 +69,19 @@
         %dd Returns messages that were flagged as a threat (or <code>threat: no</code>).
       %dl.messageSearch__definition
         %dt before: yyyy-mm-dd hh:mm
-        %dd Returns any message received before the given timestamp.
+        %dd Returns any message received before the given time. The time is optional, and plain English such as <code>before: yesterday</code> or <code>before: "3 days ago"</code> also works.
       %dl.messageSearch__definition
         %dt after: yyyy-mm-dd hh:mm
-        %dd Returns any message received after the given timestamp.
+        %dd Returns any message received after the given time. Accepts the same formats as <code>before:</code>.
       %dl.messageSearch__definition
-        %dt msgid:  57f3a85b35545@server01.mail
-        %dd Returns any message with the given Message-ID header.
+        %dt id: 1234
+        %dd Returns the message with the given Postal ID, as shown in the message's URL.
       %dl.messageSearch__definition
-        %dt tag: password-reset
-        %dd Returns any message tagged with the tag provided.
+        %dt msgid: 57f3a85b35545@server01.mail
+        %dd Returns any message with the given Message-ID header, including spam and messages in either direction.
       %dl.messageSearch__definition
-        %dt spam: yes
-        %dd By default, spam is not shown in results. To show spam instead of non-spam, just add this to the query.
+        %dt token: abcdef123456
+        %dd Returns the message with the given token, as used by the API and in tracking links.
       %dl.messageSearch__definition
         %dt order: oldest-first
         %dd By default, newest messages are shown first. To show oldest messages first, you can add this.
