@@ -5,6 +5,11 @@ require "rails_helper"
 RSpec.describe DNSResolver do
   subject(:resolver) { described_class.local }
 
+  # A tiny timeout still lets a cached answer through, so fail the request itself
+  def simulate_timeout
+    allow_any_instance_of(Resolv::DNS::Requester).to receive(:request).and_raise(Resolv::ResolvTimeout)
+  end
+
   # Now, we could mock everything in here which would give us some comfort
   # but I do think that we'll benefit more from having a full E2E test here
   # so we'll test this using values which we know to be fairly static and
@@ -20,7 +25,7 @@ RSpec.describe DNSResolver do
     end
 
     it "returns an empty array when timeout is exceeded" do
-      allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+      simulate_timeout
       expect(resolver.a("www.dnstest.postalserver.io")).to eq []
     end
 
@@ -30,7 +35,7 @@ RSpec.describe DNSResolver do
       end
 
       it "raises an error when the timeout is exceeded" do
-        allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+        simulate_timeout
         expect do
           resolver.a("www.dnstest.postalserver.io", raise_timeout_errors: true)
         end.to raise_error(Resolv::ResolvError, /timeout/)
@@ -44,7 +49,7 @@ RSpec.describe DNSResolver do
     end
 
     it "returns an empty array when timeout is exceeded" do
-      allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+      simulate_timeout
       expect(resolver.aaaa("www.dnstest.postalserver.io")).to eq []
     end
 
@@ -54,7 +59,7 @@ RSpec.describe DNSResolver do
       end
 
       it "raises an error when the timeout is exceeded" do
-        allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+        simulate_timeout
         expect do
           resolver.aaaa("www.dnstest.postalserver.io", raise_timeout_errors: true)
         end.to raise_error(Resolv::ResolvError, /timeout/)
@@ -71,7 +76,7 @@ RSpec.describe DNSResolver do
     end
 
     it "returns an empty array when timeout is exceeded" do
-      allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+      simulate_timeout
       expect(resolver.txt("dnstest.postalserver.io")).to eq []
     end
 
@@ -84,7 +89,7 @@ RSpec.describe DNSResolver do
       end
 
       it "raises an error when the timeout is exceeded" do
-        allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+        simulate_timeout
         expect do
           resolver.txt("dnstest.postalserver.io", raise_timeout_errors: true)
         end.to raise_error(Resolv::ResolvError, /timeout/)
@@ -98,7 +103,7 @@ RSpec.describe DNSResolver do
     end
 
     it "returns an empty array when timeout is exceeded" do
-      allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+      simulate_timeout
       expect(resolver.cname("cname.dnstest.postalserver.io")).to eq []
     end
 
@@ -108,7 +113,7 @@ RSpec.describe DNSResolver do
       end
 
       it "raises an error when the timeout is exceeded" do
-        allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+        simulate_timeout
         expect do
           resolver.cname("cname.dnstest.postalserver.io", raise_timeout_errors: true)
         end.to raise_error(Resolv::ResolvError, /timeout/)
@@ -125,7 +130,7 @@ RSpec.describe DNSResolver do
     end
 
     it "returns an empty array when timeout is exceeded" do
-      allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+      simulate_timeout
       expect(resolver.mx("dnstest.postalserver.io")).to eq []
     end
 
@@ -138,7 +143,7 @@ RSpec.describe DNSResolver do
       end
 
       it "raises an error when the timeout is exceeded" do
-        allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+        simulate_timeout
         expect do
           resolver.mx("dnstest.postalserver.io", raise_timeout_errors: true)
         end.to raise_error(Resolv::ResolvError, /timeout/)
@@ -155,7 +160,7 @@ RSpec.describe DNSResolver do
     end
 
     it "returns an empty array when timeout is exceeded" do
-      allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+      simulate_timeout
       expect(resolver.effective_ns("postalserver.io")).to eq []
     end
 
@@ -168,7 +173,7 @@ RSpec.describe DNSResolver do
       end
 
       it "raises an error when the timeout is exceeded" do
-        allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+        simulate_timeout
         expect do
           resolver.effective_ns("postalserver.io", raise_timeout_errors: true)
         end.to raise_error(Resolv::ResolvError, /timeout/)
@@ -182,7 +187,7 @@ RSpec.describe DNSResolver do
     end
 
     it "returns the IP when the timeout is exceeded" do
-      allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+      simulate_timeout
       expect(resolver.ip_to_hostname("151.252.1.100")).to eq "151.252.1.100"
     end
 
@@ -192,7 +197,7 @@ RSpec.describe DNSResolver do
       end
 
       it "raises an error when the timeout is exceeded" do
-        allow(Postal::Config.dns).to receive(:timeout).and_return(0.00001)
+        simulate_timeout
         expect do
           resolver.ip_to_hostname("151.252.1.100", raise_timeout_errors: true)
         end.to raise_error(Resolv::ResolvError, /timeout/)
