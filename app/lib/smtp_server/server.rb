@@ -35,6 +35,7 @@ module SMTPServer
 
     def run
       logger.tagged(component: "smtp-server") do
+        Postal::ErrorTracker.area = "smtp"
         listen
         run_event_loop
       end
@@ -136,18 +137,9 @@ module SMTPServer
               monitor.value = client
             rescue StandardError => e
               # If something goes wrong, log as appropriate and disconnect the client
-              if defined?(Sentry)
-                Sentry.capture_exception(e, extra: { trace_id: begin
-                  client.trace_id
-                rescue StandardError
-                  nil
-                end })
-              end
-              logger.error "An error occurred while accepting a new client."
-              logger.error "#{e.class}: #{e.message}"
-              e.backtrace.each do |line|
-                logger.error line
-              end
+              Postal::ErrorTracker.report(e, logger: logger,
+                                             message: "An error occurred while accepting a new client.",
+                                             tags: { request_id: client&.trace_id })
               increment_prometheus_counter :postal_smtp_server_exceptions_total,
                                            labels: { error: e.class.to_s, type: "client-accept" }
               begin
@@ -247,18 +239,10 @@ module SMTPServer
             rescue StandardError => e
               # Something went wrong, log as appropriate
               client_id = client ? client.trace_id : "------"
-              if defined?(Sentry)
-                Sentry.capture_exception(e, extra: { trace_id: begin
-                  client&.trace_id
-                rescue StandardError
-                  nil
-                end })
-              end
-              logger.error "An error occurred while processing data from a client.", trace_id: client_id
-              logger.error "#{e.class}: #{e.message}", trace_id: client_id
-              e.backtrace.each do |iline|
-                logger.error iline, trace_id: client_id
-              end
+              Postal::ErrorTracker.report(e, logger: logger,
+                                             message: "An error occurred while processing data from a client.",
+                                             tags: { request_id: client&.trace_id },
+                                             trace_id: client_id)
 
               increment_prometheus_counter :postal_smtp_server_exceptions_total,
                                            labels: { error: e.class.to_s, type: "data" }

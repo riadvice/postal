@@ -27,6 +27,10 @@ module LegacyAPI
   #     returned JSON.
   class BaseController < ActionController::Base
 
+    include ErrorTracking
+
+    self.error_tracking_area = "api"
+
     skip_before_action :set_browser_id
     skip_before_action :verify_authenticity_token
 

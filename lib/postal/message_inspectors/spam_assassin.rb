@@ -48,8 +48,7 @@ module Postal
       rescue Timeout::Error
         inspection.spam_checks << SpamCheck.new("TIMEOUT", 0, "Timed out when scanning for spam")
       rescue StandardError => e
-        logger.error "Error talking to spamd: #{e.class} (#{e.message})"
-        logger.error e.backtrace[0, 5]
+        Postal::ErrorTracker.report(e, logger: logger, message: "Error talking to spamd")
         inspection.spam_checks << SpamCheck.new("ERROR", 0, "Error when scanning for spam")
       ensure
         begin

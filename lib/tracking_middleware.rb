@@ -45,7 +45,7 @@ class TrackingMiddleware
     rescue StandardError => e
       # Somethign else went wrong. We don't want to stop the image loading though because
       # this is our problem. Log this exception though.
-      Sentry.capture_exception(e) if defined?(Sentry)
+      Postal::ErrorTracker.capture_exception(e, tags: { area: "tracking" })
     end
 
     if request.params["src"].nil?

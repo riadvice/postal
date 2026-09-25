@@ -103,7 +103,9 @@ class SMTPSender < BaseSender
   def send_message_to_smtp_client(raw_message, mail_from, rcpt_to, retry_on_connection_error: true)
     start_time = Time.now
     smtp_result = with_hard_timeout(Postal::Config.smtp_client.transaction_timeout) do
-      @current_endpoint.send_message(raw_message, mail_from, [rcpt_to])
+      Postal::ErrorTracker.trace("smtp.client", "SMTP send", server: @current_endpoint.server.hostname) do
+        @current_endpoint.send_message(raw_message, mail_from, [rcpt_to])
+      end
     end
     logger.info "Accepted by #{@current_endpoint} for #{rcpt_to}"
     create_result("Sent", start_time) do |r|
@@ -125,7 +127,7 @@ class SMTPSender < BaseSender
       r.retry = true
     end
   rescue Net::SMTPServerBusy, Net::SMTPAuthenticationError, Net::SMTPSyntaxError, Net::SMTPUnknownError => e
-    logger.error "#{e.class}: #{e.message}"
+    logger.warn "#{e.class}: #{e.message}"
     @current_endpoint.reset_smtp_session
 
     create_result("SoftFail", start_time) do |r|
@@ -140,7 +142,7 @@ class SMTPSender < BaseSender
       end
     end
   rescue Net::SMTPFatalError => e
-    logger.error "#{e.class}: #{e.message}"
+    logger.warn "#{e.class}: #{e.message}"
     @current_endpoint.reset_smtp_session
 
     create_result("HardFail", start_time) do |r|
@@ -148,12 +150,12 @@ class SMTPSender < BaseSender
       r.output = e.message
     end
   rescue StandardError => e
-    logger.error "#{e.class}: #{e.message}"
-    @current_endpoint.reset_smtp_session
-
-    if defined?(Sentry)
-      # Sentry.capture_exception(e, extra: { log_id: @log_id, server_id: message.server.id, message_id: message.id })
+    if e.is_a?(SystemCallError) || e.is_a?(IOError) || e.is_a?(OpenSSL::SSL::SSLError)
+      logger.warn "#{e.class}: #{e.message}"
+    else
+      Postal::ErrorTracker.report(e, logger: logger, extra: { log_id: @log_id })
     end
+    @current_endpoint.reset_smtp_session
 
     create_result("SoftFail", start_time) do |r|
       r.type = "SoftFail"
@@ -236,7 +238,7 @@ class SMTPSender < BaseSender
     # If we get an SSL error, we can retry a connection without
     # ssl.
     if e.is_a?(OpenSSL::SSL::SSLError) && endpoint.server.ssl_mode == "Auto"
-      logger.error "SSL error (#{e.message}), retrying without SSL"
+      logger.warn "SSL error (#{e.message}), retrying without SSL"
       return connect_to_endpoint(endpoint, allow_ssl: false, deadline: deadline)
     end
 
@@ -247,7 +249,7 @@ class SMTPSender < BaseSender
   end
 
   def record_connection_error(log_message, error = log_message)
-    logger.error log_message
+    logger.warn log_message
     @connection_errors << error unless @connection_errors.include?(error)
   end
 

@@ -43,9 +43,13 @@ This document contains all the environment variables which are available for thi
 | `MESSAGE_DB_ENCODING` | String | The encoding to use when connecting to the MariaDB database | utf8mb4 |
 | `MESSAGE_DB_DATABASE_NAME_PREFIX` | String | The MariaDB prefix to add to database names | postal |
 | `LOGGING_RAILS_LOG_ENABLED` | Boolean | Enable the default Rails logger | false |
-| `LOGGING_SENTRY_DSN` | String | A DSN which should be used to report exceptions to Sentry |  |
+| `LOGGING_SENTRY_DSN` | String | Deprecated, use sentry.dsn instead. Only used when sentry.dsn is not set |  |
 | `LOGGING_ENABLED` | Boolean | Enable the Postal logger to log to STDOUT | true |
 | `LOGGING_HIGHLIGHTING_ENABLED` | Boolean | Enable highlighting of log lines | false |
+| `SENTRY_DSN` | String | A Sentry DSN to report errors, error logs and request timings to. Nothing is sent when empty |  |
+| `SENTRY_TRACES_SAMPLE_RATE` | Float | The share of web requests, jobs and tasks to time (0.0 to 1.0) | 0.01 |
+| `SENTRY_LOG_LEVEL` | String | Log records from this level are reported as issues and log entries | error |
+| `SENTRY_BREADCRUMB_LEVEL` | String | Log records from this level are sent as breadcrumbs with the next issue | info |
 | `GELF_HOST` | String | GELF-capable host to send logs to |  |
 | `GELF_PORT` | Integer | GELF port to send logs to | 12201 |
 | `GELF_FACILITY` | String | The facility name to add to all log entries sent to GELF | postal |

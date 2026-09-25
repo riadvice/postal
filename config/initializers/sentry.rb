@@ -1,9 +1,6 @@
 # frozen_string_literal: true
 
 require_relative "../../lib/postal/config"
+require_relative "../../lib/postal/error_tracker"
 
-if Postal::Config.logging.sentry_dsn
-  Sentry.init do |config|
-    config.dsn = Postal::Config.logging.sentry_dsn
-  end
-end
+Postal::ErrorTracker.init

@@ -73,7 +73,7 @@ class WebhookDeliveryService
       return
     end
 
-    logger.error "Received #{@http_result[:code]} status code. That's not OK."
+    logger.warn "Received #{@http_result[:code]} status code. That's not OK."
     @webhook_request.error = "Couldn't send to URL. Code received was #{@http_result[:code]}"
   end
 

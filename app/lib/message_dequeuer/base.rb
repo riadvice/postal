@@ -84,18 +84,16 @@ module MessageDequeuer
     end
 
     def handle_exception(exception)
-      log "internal error: #{exception.class}: #{exception.message}"
-      exception.backtrace.each { |line| log(line) }
+      Postal::ErrorTracker.silence do
+        log "internal error: #{exception.class}: #{exception.message}"
+        exception.backtrace.each { |line| log(line) }
+      end
 
       queued_message.retry_later unless queued_message.destroyed?
       log "message requeued for trying later, at #{queued_message.retry_after}"
 
-      if defined?(Sentry)
-        Sentry.capture_exception(exception, extra: {
-          server_id: queued_message.server_id,
-          queued_message_id: queued_message.message_id
-        })
-      end
+      Postal::ErrorTracker.capture_exception(exception, tags: { server_id: queued_message.server_id },
+                                                        extra: { queued_message_id: queued_message.message_id })
 
       queued_message.message&.create_delivery("Error",
                                               details: "An internal error occurred while sending " \

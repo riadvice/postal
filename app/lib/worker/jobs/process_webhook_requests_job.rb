@@ -40,7 +40,9 @@ module Worker
         @requests_to_process.each do |request|
           work_completed!
 
-          WebhookDeliveryService.new(webhook_request: request).call
+          Postal::ErrorTracker.transaction("WebhookDeliveryService", operation: "queue.process", tags: { server_id: request.server_id }) do
+            WebhookDeliveryService.new(webhook_request: request).call
+          end
         end
       end
 

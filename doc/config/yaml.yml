@@ -89,12 +89,22 @@ message_db:
 logging:
   # Enable the default Rails logger
   rails_log_enabled: false
-  # A DSN which should be used to report exceptions to Sentry
+  # Deprecated, use sentry.dsn instead. Only used when sentry.dsn is not set
   sentry_dsn: 
   # Enable the Postal logger to log to STDOUT
   enabled: true
   # Enable highlighting of log lines
   highlighting_enabled: false
+
+sentry:
+  # A Sentry DSN to report errors, error logs and request timings to. Nothing is sent when empty
+  dsn: 
+  # The share of web requests, jobs and tasks to time (0.0 to 1.0)
+  traces_sample_rate: 0.01
+  # Log records from this level are reported as issues and log entries
+  log_level: error
+  # Log records from this level are sent as breadcrumbs with the next issue
+  breadcrumb_level: info
 
 gelf:
   # GELF-capable host to send logs to

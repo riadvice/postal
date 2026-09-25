@@ -57,9 +57,7 @@ module Postal
     rescue StandardError => e
       raise if Rails.env.development?
 
-      if defined?(Sentry)
-        Sentry.capture_exception(e)
-      end
+      Postal::ErrorTracker.capture_exception(e)
       @actioned = false
       @tracked_links = 0
       @tracked_images = 0

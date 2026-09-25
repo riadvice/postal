@@ -37,8 +37,7 @@ module Postal
         inspection.threat = false
         inspection.threat_message = "Timed out scanning for threats"
       rescue StandardError => e
-        logger.error "Error talking to clamav: #{e.class} (#{e.message})"
-        logger.error e.backtrace[0, 5]
+        Postal::ErrorTracker.report(e, logger: logger, message: "Error talking to clamav")
         inspection.threat = false
         inspection.threat_message = "Error when scanning for threats"
       ensure

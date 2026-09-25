@@ -64,7 +64,9 @@ module Worker
       def process_messages
         @messages_to_process.each do |message|
           work_completed!
-          MessageDequeuer.process(message, logger: logger)
+          Postal::ErrorTracker.transaction("MessageDequeuer", operation: "queue.process", tags: { server_id: message.server_id }) do
+            MessageDequeuer.process(message, logger: logger)
+          end
         end
       end
 

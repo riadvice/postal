@@ -258,7 +258,7 @@ module Postal
       end
 
       string :sentry_dsn do
-        description "A DSN which should be used to report exceptions to Sentry"
+        description "Deprecated, use sentry.dsn instead. Only used when sentry.dsn is not set"
       end
 
       boolean :enabled do
@@ -269,6 +269,27 @@ module Postal
       boolean :highlighting_enabled do
         description "Enable highlighting of log lines"
         default false
+      end
+    end
+
+    group :sentry do
+      string :dsn do
+        description "A Sentry DSN to report errors, error logs and request timings to. Nothing is sent when empty"
+      end
+
+      float :traces_sample_rate do
+        description "The share of web requests, jobs and tasks to time (0.0 to 1.0)"
+        default 0.01
+      end
+
+      string :log_level do
+        description "Log records from this level are reported as issues and log entries"
+        default "error"
+      end
+
+      string :breadcrumb_level do
+        description "Log records from this level are sent as breadcrumbs with the next issue"
+        default "info"
       end
     end
 

@@ -63,6 +63,7 @@ module Worker
 
     def run
       logger.tagged(component: "worker") do
+        Postal::ErrorTracker.area = "worker"
         setup_traps
         ensure_connection_pool_size_is_suitable
         start_work_threads
@@ -256,16 +257,18 @@ module Worker
         logger.info "running task"
 
         time = 0
-        capture_errors do
-          time = Benchmark.realtime do
-            task.new(logger: logger).call
-          end
+        Postal::ErrorTracker.transaction(task.to_s, operation: "task") do
+          capture_errors do
+            time = Benchmark.realtime do
+              task.new(logger: logger).call
+            end
 
-          observe_prometheus_histogram :postal_worker_task_runtime,
-                                       time,
-                                       labels: {
-                                        task: task.to_s.split("::").last
-                                       }
+            observe_prometheus_histogram :postal_worker_task_runtime,
+                                         time,
+                                         labels: {
+                                          task: task.to_s.split("::").last
+                                         }
+          end
         end
 
         next_run_after = task.next_run_after
@@ -288,9 +291,7 @@ module Worker
     def capture_errors
       yield
     rescue StandardError => e
-      logger.error "#{e.class} (#{e.message})"
-      e.backtrace.each { |line| logger.error line }
-      Sentry.capture_exception(e) if defined?(Sentry)
+      Postal::ErrorTracker.report(e, logger: logger)
 
       increment_prometheus_counter :postal_worker_errors,
                                    labels: { error: e.class.to_s }

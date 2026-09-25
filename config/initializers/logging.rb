@@ -32,7 +32,7 @@ begin
     string = "#{payload[:method]} #{payload[:path]} (#{payload[:status]})"
 
     if payload[:exception_class]
-      Postal.logger.error(string, **payload)
+      Postal::ErrorTracker.silence { Postal.logger.error(string, **payload) }
     else
       Postal.logger.info(string, **payload)
     end
