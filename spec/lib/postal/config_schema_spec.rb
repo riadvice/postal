@@ -183,6 +183,28 @@ module Postal
       end
     end
 
+    describe "logging.level" do
+      def level(value)
+        build_config("logging" => { "level" => value }).logging.level
+      end
+
+      it "defaults to info" do
+        expect(build_config({}).logging.level.downcase).to eq "info"
+      end
+
+      it "normalises case and whitespace" do
+        expect(level(" WARN ")).to eq "warn"
+      end
+
+      it "falls back to info when blank" do
+        expect(level("")).to eq "info"
+      end
+
+      it "rejects unknown levels" do
+        expect { level("verbose") }.to raise_error(ArgumentError, /logging.level must be one of/)
+      end
+    end
+
     describe "path substitution" do
       let(:config_root) { File.dirname(Postal.config_file_path) }
 

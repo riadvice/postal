@@ -30,6 +30,18 @@ RSpec.describe Postal do
     end
   end
 
+  describe "#process_name" do
+    it "includes a random identity to tell apart processes sharing a host and pid" do
+      expect(Postal.process_name).to match(/ id:\h{16}\z/)
+    end
+  end
+
+  describe "#logger" do
+    it "uses the configured level" do
+      expect(Postal.logger.level).to eq Logger.const_get(Postal::Config.logging.level.upcase)
+    end
+  end
+
   describe "#change_database_connection_pool_size" do
     it "changes the connection pool size" do
       expect { Postal.change_database_connection_pool_size(8) }.to change { ActiveRecord::Base.connection_pool.size }.from(5).to(8)
